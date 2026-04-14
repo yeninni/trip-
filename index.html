@@ -14,6 +14,8 @@
 :root{
   --frame-gap:16px;
   --layout-max:1280px;
+  --header-offset:122px;
+  --content-gap:18px;
   --ink:#1a1f1b;
   --ink2:#3d4a3f;
   --ink3:#6b7c6d;
@@ -43,9 +45,16 @@ body{
   overflow-y:auto;
   position:relative;
 }
+.top-stack{
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+  padding:14px 16px 10px;
+  background:linear-gradient(180deg,rgba(245,242,236,.98) 0%,rgba(245,242,236,.95) 78%,rgba(245,242,236,.72) 100%);
+  backdrop-filter:blur(16px) saturate(1.15);
+  border-bottom:1px solid rgba(255,255,255,.65);
+}
 .app-shell{
   width:min(var(--layout-max),calc(100vw - var(--frame-gap)*2));
-  margin:122px 0 42px var(--frame-gap);
+  margin:calc(var(--header-offset) + var(--content-gap)) 0 42px var(--frame-gap);
   display:grid;
   grid-template-columns:minmax(480px,1.08fr) minmax(360px,.92fr);
   gap:22px;
@@ -53,8 +62,8 @@ body{
 }
 /* ── MAP ── */
 #map-wrap{
-  position:sticky;top:118px;z-index:120;
-  height:calc(100dvh - 140px);min-height:560px;overflow:hidden;border-radius:30px;
+  position:sticky;top:calc(var(--header-offset) + var(--content-gap));z-index:100;
+  height:calc(100dvh - var(--header-offset) - 52px);min-height:560px;overflow:hidden;border-radius:30px;
   border:1px solid rgba(255,255,255,.82);
   background:linear-gradient(160deg,rgba(232,244,240,.96),rgba(245,242,236,.94));
   box-shadow:0 16px 42px rgba(45,90,61,.14);
@@ -114,8 +123,8 @@ body{
 
 /* ── TOP ── */
 .topbar{
-  position:fixed;top:0;left:0;right:0;z-index:300;
-  padding:14px 16px 0;
+  position:relative;
+  padding:0;
   display:flex;align-items:center;gap:10px;
 }
 .brand{
@@ -170,8 +179,8 @@ body{
 
 /* ── PILLS ── */
 .pill-row{
-  position:fixed;top:72px;left:0;right:0;z-index:200;
-  padding:10px 16px;
+  position:relative;
+  padding:10px 0 0;
   display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;
 }
 .pill-row::-webkit-scrollbar{display:none}
@@ -204,13 +213,13 @@ body{
 .sheet-bg.open{background:rgba(26,31,27,.35);pointer-events:all}
 
 .sheet{
-  position:relative;z-index:500;
+  position:relative;z-index:80;
   background:var(--paper);
   border-radius:28px;
   box-shadow:0 16px 42px rgba(45,90,61,.16);
   transform:none!important;
   transition:box-shadow .25s ease;
-  min-height:calc(100dvh - 140px);
+  min-height:calc(100dvh - var(--header-offset) - 52px);
   display:flex;flex-direction:column;
   border:1px solid rgba(255,255,255,.8);
 }
@@ -660,15 +669,19 @@ body{
 @media(min-width:768px){
   :root{
     --frame-gap:24px;
+    --header-offset:126px;
   }
   .landing-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .festival-list,.locker-preview-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 
 @media(max-width:1080px){
+  :root{
+    --header-offset:126px;
+  }
   .app-shell{
     width:calc(100vw - var(--frame-gap)*2);
-    margin:118px var(--frame-gap) 34px;
+    margin:calc(var(--header-offset) + 14px) var(--frame-gap) 34px;
     grid-template-columns:1fr;
   }
   #map-wrap{
@@ -681,8 +694,14 @@ body{
 }
 
 @media(max-width:560px){
+  :root{
+    --header-offset:132px;
+  }
+  .top-stack{
+    padding:12px 12px 10px;
+  }
   .app-shell{
-    margin-top:112px;
+    margin-top:calc(var(--header-offset) + 12px);
   }
   .landing-hero-shell{align-items:flex-start}
   .landing-hero-art{width:92px;height:92px;border-radius:22px}
@@ -730,36 +749,38 @@ body{
 </head>
 <body>
 
-<!-- TOP -->
-<div class="topbar">
-  <div class="brand">
-    <div class="brand-mark">
-      <img src="assets/eco-mascot.png" alt="전남 ECO 여행 마스코트">
+<div class="top-stack">
+  <!-- TOP -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <img src="assets/eco-mascot.png" alt="전남 ECO 여행 마스코트">
+      </div>
+      <div class="brand-name">전남 ECO<span>혼잡 없는 자연 여행</span></div>
     </div>
-    <div class="brand-name">전남 ECO<span>혼잡 없는 자연 여행</span></div>
+    <div class="search-pill" onclick="openSP()">
+      <span class="sp-icon">⌕</span>
+      <span class="sp-main" id="spMain">날짜와 지역을 선택하세요</span>
+      <div class="sp-sep"></div>
+      <span class="sp-date" id="spDate">날짜 선택</span>
+    </div>
+    <button class="btn-setting" onclick="openModal()" title="API 설정">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
   </div>
-  <div class="search-pill" onclick="openSP()">
-    <span class="sp-icon">⌕</span>
-    <span class="sp-main" id="spMain">날짜와 지역을 선택하세요</span>
-    <div class="sp-sep"></div>
-    <span class="sp-date" id="spDate">날짜 선택</span>
-  </div>
-  <button class="btn-setting" onclick="openModal()" title="API 설정">
-    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-    </svg>
-  </button>
-</div>
 
-<!-- PILLS -->
-<div class="pill-row" id="pillRow">
-  <div class="eco-pill on" onclick="onPill(this,'')"><div class="p-dot"></div>전체 추천</div>
-  <div class="eco-pill" onclick="onPill(this,'yeosu')"><div class="p-dot" style="background:#0ea5e9"></div>여수</div>
-  <div class="eco-pill" onclick="onPill(this,'suncheon')"><div class="p-dot" style="background:var(--leaf)"></div>순천</div>
-  <div class="eco-pill" onclick="onPill(this,'damyang')"><div class="p-dot" style="background:#65a30d"></div>담양</div>
-  <div class="eco-pill" onclick="onPill(this,'mokpo')"><div class="p-dot" style="background:var(--earth2)"></div>목포</div>
-  <div class="eco-pill" onclick="onPill(this,'boseong')"><div class="p-dot" style="background:#059669"></div>보성</div>
-  <div class="eco-pill" onclick="onPill(this,'gangjin')"><div class="p-dot" style="background:#7c3aed"></div>강진</div>
+  <!-- PILLS -->
+  <div class="pill-row" id="pillRow">
+    <div class="eco-pill on" onclick="onPill(this,'')"><div class="p-dot"></div>전체 추천</div>
+    <div class="eco-pill" onclick="onPill(this,'yeosu')"><div class="p-dot" style="background:#0ea5e9"></div>여수</div>
+    <div class="eco-pill" onclick="onPill(this,'suncheon')"><div class="p-dot" style="background:var(--leaf)"></div>순천</div>
+    <div class="eco-pill" onclick="onPill(this,'damyang')"><div class="p-dot" style="background:#65a30d"></div>담양</div>
+    <div class="eco-pill" onclick="onPill(this,'mokpo')"><div class="p-dot" style="background:var(--earth2)"></div>목포</div>
+    <div class="eco-pill" onclick="onPill(this,'boseong')"><div class="p-dot" style="background:#059669"></div>보성</div>
+    <div class="eco-pill" onclick="onPill(this,'gangjin')"><div class="p-dot" style="background:#7c3aed"></div>강진</div>
+  </div>
 </div>
 
 <main class="app-shell">
@@ -880,6 +901,22 @@ let crowdD=[],courseD=[],lockerD=[];
 let busInfoBySpot={};
 let busLoading=false;
 let busLoadToken=0;
+let kakaoBoundsGuard=false;
+
+const JEONNAM_BOUNDS={
+  south:34.0,
+  west:125.8,
+  north:35.55,
+  east:127.95,
+};
+const JEONNAM_CENTER={
+  lat:(JEONNAM_BOUNDS.south+JEONNAM_BOUNDS.north)/2,
+  lng:(JEONNAM_BOUNDS.west+JEONNAM_BOUNDS.east)/2,
+};
+const JEONNAM_LEAFLET_BOUNDS=[
+  [JEONNAM_BOUNDS.south,JEONNAM_BOUNDS.west],
+  [JEONNAM_BOUNDS.north,JEONNAM_BOUNDS.east],
+];
 
 const RG={
   yeosu:   {n:'여수',  e:'🌊',sub:'해안·야경',  theme:'바다', lat:34.7604,lng:127.6622,c:'#0ea5e9',bg:'#e0f2fe'},
@@ -1079,31 +1116,35 @@ function renderBusInfo(spot){
 function initKakaoMap(){
   mapProvider='kakao';
   map=new kakao.maps.Map(document.getElementById('map'),{
-    center:new kakao.maps.LatLng(34.87,126.99),
-    level:12,
+    center:new kakao.maps.LatLng(JEONNAM_CENTER.lat,JEONNAM_CENTER.lng),
+    level:10,
   });
   const zoomControl=new kakao.maps.ZoomControl();
   map.addControl(zoomControl,kakao.maps.ControlPosition.RIGHT);
   kakao.maps.event.addListener(map,'click',closeInfoOverlay);
+  kakao.maps.event.addListener(map,'idle',restrictKakaoMapBounds);
 }
 
 function initLeafletMap(){
   mapProvider='leaflet';
-  map=L.map('map',{zoomControl:false,attributionControl:false}).setView([34.87,126.99],8);
+  map=L.map('map',{
+    zoomControl:false,
+    attributionControl:false,
+    maxBounds:JEONNAM_LEAFLET_BOUNDS,
+    maxBoundsViscosity:1,
+    minZoom:8,
+  }).setView([JEONNAM_CENTER.lat,JEONNAM_CENTER.lng],8);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
   L.control.zoom({position:'bottomright'}).addTo(map);
 }
 
 function initMap(){
   try{
-    const isLocalHost=['localhost','127.0.0.1'].includes(window.location.hostname);
-    if(window.kakao?.maps && !isLocalHost){
+    if(window.kakao?.maps){
       initKakaoMap();
     }else{
       initLeafletMap();
-      if(isLocalHost){
-        setTimeout(()=>toast('로컬에서는 기본 지도로 표시 중입니다. 카카오 맵은 앱의 JavaScript SDK 도메인 등록 후 배포 주소에서 확인해보세요'),200);
-      }
+      setTimeout(()=>toast('카카오 지도를 사용할 수 없어 기본 지도로 표시합니다'),200);
     }
   }catch{
     initLeafletMap();
@@ -1146,6 +1187,32 @@ function closeInfoOverlay(){
 
 function makeLatLng(lat,lng){
   return mapProvider==='kakao' ? new kakao.maps.LatLng(lat,lng) : L.latLng(lat,lng);
+}
+
+function clampCoord(value,min,max){
+  return Math.min(Math.max(value,min),max);
+}
+
+function clampToJeonnam(lat,lng){
+  return {
+    lat:clampCoord(lat,JEONNAM_BOUNDS.south,JEONNAM_BOUNDS.north),
+    lng:clampCoord(lng,JEONNAM_BOUNDS.west,JEONNAM_BOUNDS.east),
+  };
+}
+
+function restrictKakaoMapBounds(){
+  if(!map||mapProvider!=='kakao'||kakaoBoundsGuard)return;
+  const center=map.getCenter();
+  const clamped=clampToJeonnam(center.getLat(),center.getLng());
+  const needsMove=Math.abs(clamped.lat-center.getLat())>0.0001||Math.abs(clamped.lng-center.getLng())>0.0001;
+  const level=Math.min(map.getLevel(),10);
+  if(!needsMove&&level===map.getLevel())return;
+  kakaoBoundsGuard=true;
+  map.setLevel(level);
+  if(needsMove){
+    map.panTo(new kakao.maps.LatLng(clamped.lat,clamped.lng));
+  }
+  setTimeout(()=>{kakaoBoundsGuard=false;},0);
 }
 
 function makePopupContent(title,copy,tag='지도 정보'){
@@ -1217,6 +1284,7 @@ function plotOverview(focusKey=null){
     }else if(points.length){
       map.fitBounds(points,{padding:[40,40]});
     }
+    map.setMaxBounds(JEONNAM_LEAFLET_BOUNDS);
     return;
   }
   const bounds=new kakao.maps.LatLngBounds();
@@ -1234,6 +1302,7 @@ function plotOverview(focusKey=null){
   }else{
     map.setBounds(bounds);
   }
+  restrictKakaoMapBounds();
 }
 
 function plotCourse(spots){
@@ -1259,6 +1328,7 @@ function plotCourse(spots){
     }else if(path.length===1){
       map.flyTo(path[0],13,{duration:.8});
     }
+    map.setMaxBounds(JEONNAM_LEAFLET_BOUNDS);
     return;
   }
   const path=[];
@@ -1291,6 +1361,7 @@ function plotCourse(spots){
     map.setLevel(5);
     map.panTo(path[0]);
   }
+  restrictKakaoMapBounds();
 }
 
 function openSP(){document.getElementById('spPanel').classList.add('open')}
