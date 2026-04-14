@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>전남 ECO 여행</title>
+<link rel="icon" type="image/png" href="assets/eco-mascot.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -74,8 +75,9 @@ body{
   width:30px;height:30px;border-radius:10px;
   background:linear-gradient(145deg,var(--moss2),var(--moss));
   display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
 }
-.brand-mark svg{width:16px;height:16px;fill:#fff}
+.brand-mark img{width:100%;height:100%;object-fit:cover;display:block}
 .brand-name{font-family:'Noto Serif KR',serif;font-size:14px;font-weight:700;color:var(--ink)}
 .brand-name span{color:var(--leaf);font-size:11px;display:block;font-family:'Noto Sans KR',sans-serif;font-weight:400;margin-top:-1px}
 
@@ -251,6 +253,24 @@ body{
   font-size:11px;padding:3px 10px;border-radius:20px;
   background:var(--paper3);color:var(--ink3);font-weight:500;
 }
+.tl-bus{
+  margin-top:12px;padding:12px 12px 10px;
+  border-radius:14px;background:rgba(232,244,240,.8);
+  border:1px solid rgba(255,255,255,.8);
+}
+.tl-bus-head{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  font-size:11px;font-weight:700;color:var(--moss);
+}
+.tl-bus-stop{font-size:12px;color:var(--ink2);margin-top:6px}
+.tl-bus-note{font-size:11px;color:var(--ink3);margin-top:6px;line-height:1.5}
+.tl-bus-routes{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.tl-bus-route{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:11px;font-weight:700;color:var(--ink2);
+  padding:5px 8px;border-radius:999px;background:#fff;
+}
+.tl-bus-route b{color:var(--moss)}
 .tl-transit{
   display:flex;align-items:center;gap:8px;
   padding:0 0 16px 54px;
@@ -387,6 +407,19 @@ body{
   border:1px solid rgba(255,255,255,.8);
   box-shadow:0 8px 24px rgba(45,90,61,.08);
 }
+.landing-hero-shell{display:flex;align-items:center;gap:18px}
+.landing-hero-copy{flex:1;min-width:0}
+.landing-hero-art{
+  width:118px;height:118px;flex-shrink:0;
+  border-radius:26px;padding:8px;
+  background:rgba(255,255,255,.72);
+  border:1px solid rgba(255,255,255,.8);
+  box-shadow:0 12px 28px rgba(45,90,61,.1);
+}
+.landing-hero-art img{
+  width:100%;height:100%;object-fit:cover;display:block;
+  border-radius:20px;
+}
 .landing-eyebrow{
   display:inline-flex;align-items:center;gap:6px;
   font-size:11px;font-weight:700;color:var(--moss);
@@ -511,6 +544,12 @@ body{
   .landing-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 
+@media(max-width:560px){
+  .landing-hero-shell{align-items:flex-start}
+  .landing-hero-art{width:92px;height:92px;border-radius:22px}
+  .landing-hero-art img{border-radius:16px}
+}
+
 /* ── MAP MARKER ── */
 .eco-pin{
   width:38px;height:38px;border-radius:13px;
@@ -529,7 +568,7 @@ body{
 <div class="topbar">
   <div class="brand">
     <div class="brand-mark">
-      <svg viewBox="0 0 24 24"><path d="M12 2C7 2 3 7 3 12s4 10 9 10 9-4.5 9-10S17 2 12 2zm0 2c.5 3-1.5 5-3 6 0-3 1-5 3-6zm-1 7c2-1 4-4 5-7 1 2 1.5 5 0 8-1 2-3 3.5-5 4.5V11z"/></svg>
+      <img src="assets/eco-mascot.png" alt="전남 ECO 여행 마스코트">
     </div>
     <div class="brand-name">전남 ECO<span>혼잡 없는 자연 여행</span></div>
   </div>
@@ -654,6 +693,9 @@ const BUS_API_KEY=DEFAULT_BUS_API_KEY;
 let map,markers=[],lines=[],courseMarkers=[];
 let curTab='course',curRegion=null;
 let crowdD=[],courseD=[],lockerD=[];
+let busInfoBySpot={};
+let busLoading=false;
+let busLoadToken=0;
 
 const RG={
   yeosu:   {n:'여수',  e:'🌊',sub:'해안·야경',  theme:'바다', lat:34.7604,lng:127.6622,c:'#0ea5e9',bg:'#e0f2fe'},
@@ -728,6 +770,101 @@ const LOCKERS={
   boseong: [{n:'보성버스터미널',addr:'보성군 보성읍 보성로 93',avail:4,total:8}],
   gangjin: [{n:'강진버스터미널 보관함',addr:'강진군 탐진로 36',avail:7,total:10}],
 };
+
+function listFromApi(items){
+  if(Array.isArray(items))return items;
+  return items?[items]:[];
+}
+
+function formatBusMinutes(seconds){
+  const mins=Math.max(1,Math.round(Number(seconds||0)/60));
+  return `${mins}분 후`;
+}
+
+async function fetchNearbyBusStop(lat,lng){
+  if(!BUS_API_KEY)return null;
+  const url=`https://apis.data.go.kr/1613000/BusSttnInfoInqireService/getCrdntPrxmtSttnList`
+    +`?serviceKey=${encodeURIComponent(BUS_API_KEY)}&gpsLati=${encodeURIComponent(lat)}&gpsLong=${encodeURIComponent(lng)}&_type=json&numOfRows=10&pageNo=1`;
+  const r=await fetch(url);
+  const d=await r.json();
+  return listFromApi(d?.response?.body?.items?.item)[0]||null;
+}
+
+async function fetchBusArrivals(cityCode,nodeId){
+  if(!BUS_API_KEY||!cityCode||!nodeId)return [];
+  const url=`https://apis.data.go.kr/1613000/ArvlInfoInqireService/getSttnAcctoArvlPrearngeInfoList`
+    +`?serviceKey=${encodeURIComponent(BUS_API_KEY)}&cityCode=${encodeURIComponent(cityCode)}&nodeId=${encodeURIComponent(nodeId)}&_type=json&numOfRows=10&pageNo=1`;
+  const r=await fetch(url);
+  const d=await r.json();
+  const items=listFromApi(d?.response?.body?.items?.item);
+  return items
+    .filter(item=>item?.arrtime)
+    .sort((a,b)=>Number(a.arrtime||0)-Number(b.arrtime||0))
+    .slice(0,3);
+}
+
+async function fetchBusInfoForSpot(spot){
+  try{
+    const stop=await fetchNearbyBusStop(spot.lat,spot.lng);
+    if(!stop){
+      return {status:'empty',message:'주변 정류장 정보를 찾지 못했어요.'};
+    }
+    const arrivals=await fetchBusArrivals(stop.citycode,stop.nodeid);
+    return {
+      status:arrivals.length?'ok':'empty',
+      stopName:stop.nodenm||'가까운 정류장',
+      stopNo:stop.nodeno||'',
+      cityCode:stop.citycode||'',
+      arrivals:arrivals.map(item=>({
+        routeNo:item.routeno||item.routeNo||'버스',
+        routeType:item.routetp||'일반',
+        minutes:formatBusMinutes(item.arrtime),
+        stopsAway:item.arrprevstationcnt?`${item.arrprevstationcnt}정거장 전`:null,
+      })),
+      message:arrivals.length?'':`정류장은 찾았지만 실시간 도착 정보가 없어요.`,
+    };
+  }catch{
+    return {status:'error',message:'버스 정보를 불러오지 못했어요.'};
+  }
+}
+
+async function loadBusInfoForCurrentCourse(){
+  const token=Date.now();
+  busLoadToken=token;
+  busInfoBySpot={};
+  busLoading=true;
+  render();
+
+  for(const spot of courseD){
+    const info=await fetchBusInfoForSpot(spot);
+    if(busLoadToken!==token)return;
+    busInfoBySpot[spot.n]=info;
+    render();
+  }
+
+  if(busLoadToken!==token)return;
+  busLoading=false;
+  render();
+}
+
+function renderBusInfo(spot){
+  const info=busInfoBySpot[spot.n];
+  if(!info&&busLoading){
+    return `<div class="tl-bus"><div class="tl-bus-head"><span>🚌 버스 접근</span><span>불러오는 중</span></div><div class="tl-bus-note">가까운 정류장과 도착 예정 버스를 확인하고 있어요.</div></div>`;
+  }
+  if(!info){
+    return '';
+  }
+  if(info.status==='error'){
+    return `<div class="tl-bus"><div class="tl-bus-head"><span>🚌 버스 접근</span><span>연결 실패</span></div><div class="tl-bus-note">${info.message}</div></div>`;
+  }
+  return `<div class="tl-bus">
+    <div class="tl-bus-head"><span>🚌 버스 접근</span><span>${info.arrivals?.length?`실시간 ${info.arrivals.length}건`:'도착 정보 없음'}</span></div>
+    <div class="tl-bus-stop">${info.stopName}${info.stopNo?` · 정류장 ${info.stopNo}`:''}</div>
+    ${info.arrivals?.length?`<div class="tl-bus-routes">${info.arrivals.map(route=>`<span class="tl-bus-route"><b>${route.routeNo}</b>${route.minutes}${route.stopsAway?` · ${route.stopsAway}`:''}</span>`).join('')}</div>`:''}
+    ${info.message?`<div class="tl-bus-note">${info.message}</div>`:''}
+  </div>`;
+}
 
 function initMap(){
   map=L.map('map',{zoomControl:false,attributionControl:false}).setView([34.87,126.99],8);
@@ -883,12 +1020,19 @@ function renderLandingState(){
   document.getElementById('sheetBody').innerHTML=`
     <div class="landing">
       <div class="landing-hero">
-        <div class="landing-eyebrow">한적한 여행 추천</div>
-        <div class="landing-title">복잡한 인기 코스 대신, 지금 더 여유로운 전남을 먼저 골라보세요</div>
-        <div class="landing-copy">${featured.n}부터 둘러보면 ${featured.sub} 분위기를 빠르게 감 잡을 수 있어요. 날짜를 정하면 혼잡도 기반으로 바로 코스를 추천해드립니다.</div>
-        <div class="landing-cta-row">
-          <button class="landing-btn primary" onclick="openSP()">날짜 선택하고 코스 찾기</button>
-          <button class="landing-btn secondary" onclick="previewRegion('${key}')">${featured.n} 먼저 보기</button>
+        <div class="landing-hero-shell">
+          <div class="landing-hero-copy">
+            <div class="landing-eyebrow">한적한 여행 추천</div>
+            <div class="landing-title">복잡한 인기 코스 대신, 지금 더 여유로운 전남을 먼저 골라보세요</div>
+            <div class="landing-copy">${featured.n}부터 둘러보면 ${featured.sub} 분위기를 빠르게 감 잡을 수 있어요. 날짜를 정하면 혼잡도 기반으로 바로 코스를 추천해드립니다.</div>
+            <div class="landing-cta-row">
+              <button class="landing-btn primary" onclick="openSP()">날짜 선택하고 코스 찾기</button>
+              <button class="landing-btn secondary" onclick="previewRegion('${key}')">${featured.n} 먼저 보기</button>
+            </div>
+          </div>
+          <div class="landing-hero-art">
+            <img src="assets/eco-mascot.png" alt="전남 ECO 여행 마스코트">
+          </div>
         </div>
       </div>
       <div class="landing-section-title">
@@ -949,6 +1093,7 @@ async function runSearch(){
   updatePeek(rk);
   render();
   plotCourse(courseD);
+  loadBusInfoForCurrentCourse();
   toSheet('half');
 
   btn.disabled=false;
@@ -1051,6 +1196,7 @@ function renderCourse(){
           <div class="tl-title">${item.n}</div>
           <div class="tl-body">${item.d}</div>
           <div class="tl-tags">${item.tags.map(tag=>`<span class="tl-tag">${tag}</span>`).join('')}</div>
+          ${renderBusInfo(item)}
           <div class="tl-cta">지도에서 보기</div>
         </button>
       </div>
@@ -1198,6 +1344,7 @@ async function jumpR(key){
   setActiveTab('course');
   render();
   plotCourse(courseD);
+  loadBusInfoForCurrentCourse();
   toSheet('half');
 }
 
