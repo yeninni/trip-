@@ -45,7 +45,7 @@ body{
 }
 .app-shell{
   width:min(1500px,calc(100vw - var(--frame-gap)*2));
-  margin:122px auto 42px;
+  margin:136px auto 42px;
   display:grid;
   grid-template-columns:minmax(380px,1.02fr) minmax(340px,.84fr) minmax(250px,.54fr);
   gap:22px;
@@ -171,7 +171,7 @@ body{
 /* ── PILLS ── */
 .pill-row{
   position:fixed;top:72px;left:0;right:0;z-index:200;
-  padding:10px 16px;
+  padding:10px 16px 16px;
   display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;
 }
 .pill-row::-webkit-scrollbar{display:none}
@@ -699,7 +699,7 @@ body{
 @media(max-width:1080px){
   .app-shell{
     width:calc(100vw - var(--frame-gap)*2);
-    margin:118px auto 34px;
+    margin:132px auto 34px;
     grid-template-columns:1fr;
   }
   #map-wrap{
@@ -717,7 +717,7 @@ body{
 
 @media(max-width:560px){
   .app-shell{
-    margin-top:112px;
+    margin-top:126px;
   }
   .landing-hero-shell{align-items:flex-start}
   .landing-hero-art{width:92px;height:92px;border-radius:22px}
