@@ -12,6 +12,8 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
+  --frame-gap:16px;
+  --layout-max:1280px;
   --ink:#1a1f1b;
   --ink2:#3d4a3f;
   --ink3:#6b7c6d;
@@ -36,15 +38,62 @@ body{
   font-family:'Noto Sans KR',sans-serif;
   background:var(--paper);
   color:var(--ink);
-  height:100dvh;
-  overflow:hidden;
+  min-height:100dvh;
+  overflow-x:hidden;
+  overflow-y:auto;
   position:relative;
 }
+.app-shell{
+  width:min(var(--layout-max),calc(100vw - var(--frame-gap)*2));
+  margin:122px 0 42px var(--frame-gap);
+  display:grid;
+  grid-template-columns:minmax(480px,1.08fr) minmax(360px,.92fr);
+  gap:22px;
+  align-items:start;
+}
 /* ── MAP ── */
-#map-wrap{position:fixed;inset:0;z-index:0}
+#map-wrap{
+  position:sticky;top:118px;z-index:120;
+  height:calc(100dvh - 140px);min-height:560px;overflow:hidden;border-radius:30px;
+  border:1px solid rgba(255,255,255,.82);
+  background:linear-gradient(160deg,rgba(232,244,240,.96),rgba(245,242,236,.94));
+  box-shadow:0 16px 42px rgba(45,90,61,.14);
+}
 #map{width:100%;height:100%}
+.map-frame-copy{
+  position:absolute;left:16px;right:16px;bottom:16px;z-index:2;
+  display:flex;align-items:flex-end;justify-content:space-between;gap:14px;
+  pointer-events:none;
+}
+.map-frame-kicker{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--moss);background:rgba(245,242,236,.9);padding:6px 10px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.82);
+  box-shadow:0 8px 20px rgba(26,31,27,.1);
+}
+.map-frame-title{
+  margin-top:10px;font-family:'Noto Serif KR',serif;font-size:22px;font-weight:700;
+  color:#fff;text-shadow:0 10px 24px rgba(26,31,27,.36);
+}
+.map-frame-sub{
+  margin-top:6px;font-size:12px;color:rgba(255,255,255,.92);line-height:1.6;
+  text-shadow:0 10px 24px rgba(26,31,27,.32);
+}
+.map-frame-badge{
+  padding:10px 14px;border-radius:18px;
+  background:rgba(245,242,236,.92);border:1px solid rgba(255,255,255,.82);
+  box-shadow:0 10px 26px rgba(26,31,27,.12);
+  min-width:108px;
+}
+.map-frame-badge strong{
+  display:block;font-size:19px;font-family:'Noto Serif KR',serif;color:var(--moss);
+}
+.map-frame-badge span{
+  display:block;margin-top:4px;font-size:11px;color:var(--ink3);font-weight:600;
+}
 .leaflet-control-attribution{display:none!important}
-.leaflet-control-zoom{margin-bottom:180px!important;margin-right:16px!important}
+.leaflet-control-zoom{margin-bottom:18px!important;margin-right:16px!important}
 .leaflet-control-zoom a{
   background:rgba(245,242,236,.92)!important;
   border:none!important;
@@ -147,6 +196,7 @@ body{
 
 /* ── SHEET ── */
 .sheet-bg{
+  display:none!important;
   position:fixed;inset:0;z-index:400;
   background:transparent;pointer-events:none;
   transition:background .35s;
@@ -154,27 +204,25 @@ body{
 .sheet-bg.open{background:rgba(26,31,27,.35);pointer-events:all}
 
 .sheet{
-  position:fixed;bottom:0;left:0;right:0;z-index:500;
+  position:relative;z-index:500;
   background:var(--paper);
-  border-radius:28px 28px 0 0;
-  box-shadow:0 -8px 60px rgba(45,90,61,.18);
-  transform:translateY(calc(100% - 96px));
-  transition:transform .42s cubic-bezier(.32,.72,0,1);
-  max-height:88dvh;
+  border-radius:28px;
+  box-shadow:0 16px 42px rgba(45,90,61,.16);
+  transform:none!important;
+  transition:box-shadow .25s ease;
+  min-height:calc(100dvh - 140px);
   display:flex;flex-direction:column;
-  border-top:1px solid rgba(255,255,255,.8);
+  border:1px solid rgba(255,255,255,.8);
 }
-.sheet.peek{transform:translateY(calc(100% - 164px))}
-.sheet.half{transform:translateY(38%)}
-.sheet.full{transform:translateY(0)}
+.sheet.peek,.sheet.half,.sheet.full{transform:none!important}
 
-.sheet-drag{padding:14px 0 4px;cursor:grab;flex-shrink:0;text-align:center}
+.sheet-drag{display:none}
 .sheet-drag-bar{display:inline-block;width:40px;height:4px;border-radius:2px;background:var(--paper3)}
 
 /* Peek bar */
 .peek-bar{
   padding:0 20px 16px;
-  display:flex;align-items:center;gap:14px;cursor:pointer;
+  display:flex;align-items:center;gap:14px;cursor:default;
 }
 .peek-region-dot{
   width:48px;height:48px;border-radius:16px;
@@ -197,8 +245,7 @@ body{
   border:none;cursor:pointer;
   background:rgba(82,160,106,.14);color:var(--moss);
 }
-.peek-chevron{color:var(--ink4);font-size:22px;transition:transform .3s}
-.sheet.half .peek-chevron,.sheet.full .peek-chevron{transform:rotate(90deg)}
+.peek-chevron{display:none}
 
 /* Tabs */
 .tabs{
@@ -214,7 +261,17 @@ body{
 }
 .t-tab.on{color:var(--moss);border-bottom-color:var(--moss)}
 
-.sheet-body{overflow-y:auto;flex:1;overscroll-behavior:contain}
+.sheet-body{overflow:visible;flex:1}
+.section-head{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
+  margin:22px 20px 0;
+}
+.section-title{
+  font-family:'Noto Serif KR',serif;font-size:17px;font-weight:700;color:var(--ink);
+}
+.section-note{
+  font-size:11px;color:var(--ink4);line-height:1.5;text-align:right;
+}
 
 /* ── SUMMARY BAND ── */
 .sum-band{
@@ -501,12 +558,60 @@ body{
 .access-title{font-size:14px;font-weight:700;color:var(--ink);margin-top:2px}
 .access-copy{font-size:12px;color:var(--ink3);margin-top:4px}
 .access-arrow{font-size:20px;color:var(--moss)}
+.festival-list{
+  padding:12px 20px 0;
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+}
+.festival-card{
+  border-radius:20px;padding:16px;
+  background:linear-gradient(155deg,rgba(255,255,255,.84),rgba(232,244,240,.72));
+  border:1px solid rgba(255,255,255,.86);
+  box-shadow:0 10px 24px rgba(45,90,61,.07);
+}
+.festival-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:999px;
+  background:rgba(82,160,106,.14);color:var(--moss);
+  font-size:10px;font-weight:700;letter-spacing:.04em;
+}
+.festival-name{
+  margin-top:10px;font-family:'Noto Serif KR',serif;font-size:15px;font-weight:700;color:var(--ink);
+}
+.festival-meta{margin-top:6px;font-size:11px;color:var(--ink3);line-height:1.6}
+.festival-copy{margin-top:10px;font-size:12px;color:var(--ink2);line-height:1.65}
+.festival-foot{
+  margin-top:12px;font-size:10px;color:var(--ink4);font-weight:600;
+}
+.locker-preview-grid{
+  padding:12px 20px 0;
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+}
+.locker-preview-card{
+  padding:16px;border-radius:20px;background:rgba(255,255,255,.72);
+  border:1px solid rgba(255,255,255,.84);
+  box-shadow:0 10px 24px rgba(45,90,61,.06);
+}
+.locker-preview-top{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+}
+.locker-preview-name{font-size:13px;font-weight:700;color:var(--ink)}
+.locker-preview-addr{margin-top:4px;font-size:11px;color:var(--ink4);line-height:1.5}
+.locker-preview-badge{
+  flex-shrink:0;padding:6px 9px;border-radius:999px;font-size:10px;font-weight:700;
+}
+.locker-preview-badge.ok{background:#dcfce7;color:#166534}
+.locker-preview-badge.full{background:#fee2e2;color:#991b1b}
+.locker-preview-meter{
+  margin-top:12px;height:6px;border-radius:999px;background:var(--paper3);overflow:hidden;
+}
+.locker-preview-fill{height:100%;border-radius:999px}
+.locker-preview-copy{margin-top:8px;font-size:11px;color:var(--ink3);line-height:1.55}
 .skel{border-radius:14px;background:linear-gradient(90deg,var(--paper2) 25%,var(--paper3) 50%,var(--paper2) 75%);background-size:200%;animation:sk 1.2s infinite}
 @keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 /* ── TOAST ── */
 .toast{
-  position:fixed;bottom:120px;left:50%;transform:translateX(-50%) translateY(8px);
+  position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(8px);
   background:rgba(26,31,27,.88);backdrop-filter:blur(12px);
   color:#fff;padding:10px 20px;border-radius:40px;
   font-size:12px;font-weight:500;z-index:999;
@@ -553,24 +658,45 @@ body{
 
 /* ── DESKTOP ── */
 @media(min-width:768px){
-  .sheet{
-    left:auto;right:24px;bottom:24px;
-    width:390px;border-radius:var(--r2);
-    max-height:calc(100dvh - 130px);
-    transform:translateY(0)!important;
-    box-shadow:0 8px 48px rgba(45,90,61,.18);
-    border:1px solid rgba(255,255,255,.8);
+  :root{
+    --frame-gap:24px;
   }
-  .sheet-drag,.sheet-bg{display:none}
-  .peek-bar{cursor:default}
-  .peek-chevron{display:none}
   .landing-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .festival-list,.locker-preview-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
+@media(max-width:1080px){
+  .app-shell{
+    width:calc(100vw - var(--frame-gap)*2);
+    margin:118px var(--frame-gap) 34px;
+    grid-template-columns:1fr;
+  }
+  #map-wrap{
+    position:relative;top:auto;
+    height:340px;min-height:340px;
+  }
+  .sheet{
+    min-height:auto;
+  }
 }
 
 @media(max-width:560px){
+  .app-shell{
+    margin-top:112px;
+  }
   .landing-hero-shell{align-items:flex-start}
   .landing-hero-art{width:92px;height:92px;border-radius:22px}
   .landing-hero-art img{border-radius:16px}
+  #map-wrap{
+    height:224px;min-height:224px;
+  }
+  .map-frame-copy{left:14px;right:14px;bottom:14px;align-items:flex-end}
+  .map-frame-title{font-size:18px}
+  .map-frame-sub{font-size:11px;max-width:170px}
+  .map-frame-badge{min-width:92px;padding:8px 12px}
+  .festival-list,.locker-preview-grid{grid-template-columns:1fr}
+  .section-head{display:block}
+  .section-note{margin-top:4px;text-align:left}
 }
 
 /* ── MAP MARKER ── */
@@ -604,8 +730,6 @@ body{
 </head>
 <body>
 
-<div id="map-wrap"><div id="map"></div></div>
-
 <!-- TOP -->
 <div class="topbar">
   <div class="brand">
@@ -638,37 +762,54 @@ body{
   <div class="eco-pill" onclick="onPill(this,'gangjin')"><div class="p-dot" style="background:#7c3aed"></div>강진</div>
 </div>
 
-<!-- SHEET BG -->
-<div class="sheet-bg" id="sheetBg" onclick="toSheet('peek')"></div>
-
-<!-- SHEET -->
-<div class="sheet peek" id="sheet">
-  <div class="sheet-drag" id="dragHandle"><div class="sheet-drag-bar"></div></div>
-
-  <div class="peek-bar" id="peekBar" onclick="toSheet('half')">
-    <div class="peek-region-dot" id="peekIcon">🌿</div>
-    <div class="peek-text">
-      <div class="peek-name" id="peekTitle">전남 여행을 계획해보세요</div>
-      <div class="peek-meta" id="peekMeta">검색창을 눌러 날짜와 지역을 선택하세요</div>
-      <div class="peek-actions" id="peekActions"></div>
-    </div>
-    <div class="peek-chevron">›</div>
-  </div>
-
-  <div class="tabs" id="tabs">
-    <div class="t-tab on" onclick="onTab('course',this)">코스</div>
-    <div class="t-tab" onclick="onTab('crowd',this)">혼잡도</div>
-    <div class="t-tab" onclick="onTab('locker',this)">보관함</div>
-  </div>
-
-  <div class="sheet-body" id="sheetBody">
-    <div class="empty">
-      <div class="empty-ico">🌾</div>
-      <div class="empty-t">조용한 전남을 발견하세요</div>
-      <div class="empty-s">날짜를 선택하면 혼잡도 데이터 기반으로<br>최적의 ECO 여행 코스를 추천드립니다</div>
+<main class="app-shell">
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div class="map-frame-copy">
+      <div>
+        <div class="map-frame-kicker">Map Preview</div>
+        <div class="map-frame-title" id="mapFrameTitle">전남 전역 미리보기</div>
+        <div class="map-frame-sub" id="mapFrameSub">지도를 눌러 지역 분위기를 먼저 보고, 아래 카드에서 축제와 보관함 정보를 이어서 확인해보세요.</div>
+      </div>
+      <div class="map-frame-badge">
+        <strong id="mapFrameBadge">6곳</strong>
+        <span id="mapFrameBadgeLabel">추천 지역</span>
+      </div>
     </div>
   </div>
-</div>
+
+  <!-- SHEET BG -->
+  <div class="sheet-bg" id="sheetBg" onclick="toSheet('peek')"></div>
+
+  <!-- SHEET -->
+  <div class="sheet peek" id="sheet">
+    <div class="sheet-drag" id="dragHandle"><div class="sheet-drag-bar"></div></div>
+
+    <div class="peek-bar" id="peekBar" onclick="toSheet('half')">
+      <div class="peek-region-dot" id="peekIcon">🌿</div>
+      <div class="peek-text">
+        <div class="peek-name" id="peekTitle">전남 여행을 계획해보세요</div>
+        <div class="peek-meta" id="peekMeta">검색창을 눌러 날짜와 지역을 선택하세요</div>
+        <div class="peek-actions" id="peekActions"></div>
+      </div>
+      <div class="peek-chevron">›</div>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <div class="t-tab on" onclick="onTab('course',this)">코스</div>
+      <div class="t-tab" onclick="onTab('crowd',this)">혼잡도</div>
+      <div class="t-tab" onclick="onTab('locker',this)">보관함</div>
+    </div>
+
+    <div class="sheet-body" id="sheetBody">
+      <div class="empty">
+        <div class="empty-ico">🌾</div>
+        <div class="empty-t">조용한 전남을 발견하세요</div>
+        <div class="empty-s">날짜를 선택하면 혼잡도 데이터 기반으로<br>최적의 ECO 여행 코스를 추천드립니다</div>
+      </div>
+    </div>
+  </div>
+</main>
 
 <!-- SEARCH PANEL -->
 <div class="sp-panel" id="spPanel">
@@ -813,6 +954,32 @@ const LOCKERS={
   boseong: [{n:'보성버스터미널',addr:'보성군 보성읍 보성로 93',avail:4,total:8}],
   gangjin: [{n:'강진버스터미널 보관함',addr:'강진군 탐진로 36',avail:7,total:10}],
 };
+const FESTIVALS={
+  yeosu:[
+    {season:'봄·초여름',name:'해양 야경 페스타',place:'이순신광장 · 해양공원',copy:'밤바다 산책, 버스킹, 해상 포토스팟을 묶어 보기 좋은 시즌형 행사예요.'},
+    {season:'가을',name:'섬·바다 문화주간',place:'오동도 · 엑스포 일대',copy:'섬 산책과 바다 전망 코스를 느긋하게 연결하기 좋은 분위기예요.'},
+  ],
+  suncheon:[
+    {season:'봄',name:'정원 테마 페스티벌',place:'순천만국가정원',copy:'꽃과 정원 전시가 중심이라 낮 시간 산책 동선과 잘 맞아요.'},
+    {season:'가을',name:'습지 생태 체험주간',place:'순천만 습지 일대',copy:'갈대 풍경과 생태 체험 프로그램을 함께 보기 좋은 계절 포인트예요.'},
+  ],
+  damyang:[
+    {season:'봄',name:'대나무 힐링 페어',place:'죽녹원 · 관방제림',copy:'숲길 걷기와 로컬 먹거리를 함께 즐기기 좋은 대표 시즌이에요.'},
+    {season:'가을',name:'정원·산책 주간',place:'메타세쿼이아길',copy:'서늘한 계절에 라이딩과 산책을 묶기 좋은 분위기로 바뀌어요.'},
+  ],
+  mokpo:[
+    {season:'봄',name:'항구 문화 페스타',place:'근대역사관 · 평화광장',copy:'근대거리 산책과 해양 야경을 묶은 문화 프로그램 흐름과 잘 어울려요.'},
+    {season:'여름',name:'야경 뮤직 나이트',place:'평화광장 해변',copy:'낮에는 역사 코스, 밤에는 공연과 야경으로 연결하기 좋은 구성이에요.'},
+  ],
+  boseong:[
+    {season:'봄',name:'녹차 시즌 페스티벌',place:'보성차밭 일대',copy:'차밭 풍경이 가장 살아나는 시기라 사진과 산책 만족도가 높아요.'},
+    {season:'여름',name:'해안 힐링 위크',place:'율포 해변',copy:'바다와 차밭을 함께 묶어 여유로운 하루 코스로 만들기 좋아요.'},
+  ],
+  gangjin:[
+    {season:'봄',name:'청자 문화 주간',place:'청자박물관 일대',copy:'도예 체험, 전시, 로컬 마켓이 함께 어우러지는 대표 문화 시즌이에요.'},
+    {season:'가을',name:'역사 산책 페스티벌',place:'다산초당 · 가우도',copy:'역사 명소와 해안 걷기를 연결해 묵직한 분위기의 여행을 만들기 좋아요.'},
+  ],
+};
 
 function listFromApi(items){
   if(Array.isArray(items))return items;
@@ -943,6 +1110,19 @@ function initMap(){
     setTimeout(()=>toast('카카오 지도를 불러오지 못해 기본 지도로 표시합니다'),200);
   }
   plotOverview();
+  updateMapFrame();
+  setTimeout(refreshMapLayout,120);
+}
+
+function refreshMapLayout(){
+  if(!map)return;
+  if(mapProvider==='kakao'){
+    const center=map.getCenter();
+    map.relayout();
+    if(center)map.setCenter(center);
+    return;
+  }
+  map.invalidateSize();
 }
 
 function clearMap(){
@@ -1196,6 +1376,63 @@ function getBestRegionKey(){
   return source[0]?.key||'damyang';
 }
 
+function updateMapFrame(key=curRegion){
+  const title=document.getElementById('mapFrameTitle');
+  const sub=document.getElementById('mapFrameSub');
+  const badge=document.getElementById('mapFrameBadge');
+  const badgeLabel=document.getElementById('mapFrameBadgeLabel');
+  if(!key||!RG[key]){
+    title.textContent='전남 전역 미리보기';
+    sub.textContent='지도를 눌러 지역 분위기를 먼저 보고, 아래 카드에서 축제와 보관함 정보를 이어서 확인해보세요.';
+    badge.textContent=`${Object.keys(RG).length}곳`;
+    badgeLabel.textContent='추천 지역';
+    return;
+  }
+  const region=RG[key];
+  const festivals=FESTIVALS[key]||[];
+  const lockers=getLockerSummary(key);
+  title.textContent=`${region.n} 지도 프리뷰`;
+  sub.textContent=`${region.sub} 흐름을 먼저 보고, 아래에서 대표 축제 ${festivals.length}건과 보관함 ${lockers.locations}곳을 이어서 확인해보세요.`;
+  badge.textContent=`${lockers.avail}/${lockers.total||0}`;
+  badgeLabel.textContent='보관함 여유';
+}
+
+function renderFestivalSection(key,limit=2){
+  const items=(FESTIVALS[key]||[]).slice(0,limit);
+  if(!items.length){
+    return `<div class="empty" style="padding-top:18px"><div class="empty-s">대표 축제 정보를 준비 중이에요.</div></div>`;
+  }
+  return `<div class="festival-list">${items.map(item=>`
+    <div class="festival-card">
+      <div class="festival-badge">축제 정보 · ${item.season}</div>
+      <div class="festival-name">${item.name}</div>
+      <div class="festival-meta">📍 ${item.place}</div>
+      <div class="festival-copy">${item.copy}</div>
+      <div class="festival-foot">운영 시기와 세부 일정은 해마다 달라질 수 있어요</div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function renderLockerPreviewSection(items){
+  if(!items.length){
+    return `<div class="empty" style="padding-top:18px"><div class="empty-s">코스를 찾으면 지역 보관함 여유 현황을 보여드려요.</div></div>`;
+  }
+  return `<div class="locker-preview-grid">${items.map(item=>{
+    const pct=item.total?Math.round(item.avail/item.total*100):0;
+    return `<div class="locker-preview-card">
+      <div class="locker-preview-top">
+        <div>
+          <div class="locker-preview-name">${item.n}</div>
+          <div class="locker-preview-addr">📍 ${item.addr}</div>
+        </div>
+        <div class="locker-preview-badge ${item.avail>0?'ok':'full'}">${item.avail>0?'여유':'만석'}</div>
+      </div>
+      <div class="locker-preview-meter"><div class="locker-preview-fill" style="width:${pct}%;background:${item.avail>0?'var(--leaf)':'#ef4444'}"></div></div>
+      <div class="locker-preview-copy">${item.avail>0?`현재 ${item.avail}/${item.total}칸 이용 가능해 짐 맡기고 이동하기 좋아요.`:'현재 만석이라 다른 보관함을 함께 보는 편이 안전해요.'}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
 function setActiveTab(name){
   curTab=name;
   const index={course:0,crowd:1,locker:2}[name];
@@ -1272,6 +1509,16 @@ function renderLandingState(){
           </button>`;
         }).join('')}
       </div>
+      <div class="section-head">
+        <div class="section-title">${featured.n} 대표 축제</div>
+        <div class="section-note">대표 시즌 분위기를 먼저 보고<br>여행 날짜를 정해보세요</div>
+      </div>
+      ${renderFestivalSection(key,2)}
+      <div class="section-head">
+        <div class="section-title">짐보관 현황 미리보기</div>
+        <div class="section-note">코스 검색 전에도 어느 정도<br>보관 거점을 가늠할 수 있어요</div>
+      </div>
+      ${renderLockerPreviewSection(LOCKERS[key]||[])}
     </div>`;
 }
 
@@ -1304,6 +1551,7 @@ async function runSearch(){
   setPillOn(rk);
   setActiveTab('course');
   updatePeek(rk);
+  updateMapFrame(rk);
   render();
   plotCourse(courseD);
   loadBusInfoForCurrentCourse();
@@ -1384,6 +1632,16 @@ function renderCourse(){
     <div class="sum-cell"><div class="sum-val">${courseD.length}</div><div class="sum-key">방문 코스</div></div>
     <div class="sum-cell"><div class="sum-val" style="font-size:13px;color:${lvC};background:${lvBg};padding:4px 8px;border-radius:20px">${lvLbl(lv)}</div><div class="sum-key">혼잡 수준</div></div>
   </div>
+  <div class="section-head">
+    <div class="section-title">축제 정보</div>
+    <div class="section-note">지역 분위기를 더 느끼고 싶을 때<br>코스 중간에 묶기 좋은 시즌 포인트예요</div>
+  </div>
+  ${renderFestivalSection(rk,2)}
+  <div class="section-head">
+    <div class="section-title">짐보관 현황</div>
+    <div class="section-note">보관 가능한 지점을 먼저 보고<br>가벼운 동선으로 이동해보세요</div>
+  </div>
+  ${renderLockerPreviewSection(lockerD)}
   <button class="access-card" onclick="openLockerTab()">
     <div>
       <div class="access-kicker">보관함 빠른 이동</div>
@@ -1498,6 +1756,7 @@ function onPill(el,key){
     setActiveTab('crowd');
     render();
     plotOverview();
+    updateMapFrame();
     updatePeek(getBestRegionKey());
     toSheet('half');
   }else{
@@ -1506,6 +1765,7 @@ function onPill(el,key){
     updatePeek();
     renderLandingState();
     plotOverview();
+    updateMapFrame();
     toSheet('peek');
   }
 }
@@ -1527,6 +1787,7 @@ function previewRegion(key){
   document.getElementById('rsel').value=key;
   setPillOn(key);
   updatePeek(key);
+  updateMapFrame(key);
   renderLandingState();
   plotOverview(key);
   toSheet('half');
@@ -1562,6 +1823,7 @@ async function jumpR(key){
   lockerD=LOCKERS[key]||[];
   document.getElementById('spMain').innerHTML=`<b>${RG[key].n}</b> · ${RG[key].sub}`;
   updatePeek(key);
+  updateMapFrame(key);
   setPillOn(key);
   setActiveTab('course');
   render();
@@ -1633,6 +1895,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     updatePeek();
     renderLandingState();
     setPillOn(null);
+    window.addEventListener('resize',refreshMapLayout);
     if(window.innerWidth>=768){
       document.getElementById('sheet').className='sheet';
       document.getElementById('sheet').style.transform='translateY(0)';
