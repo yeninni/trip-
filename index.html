@@ -11,11 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-*{
-  cursor:url("assets/cursor-mascot.cur?v=leaf3") 12 2, url("assets/cursor-mascot.png?v=leaf3") 12 2, auto;
-}
 :root{
-  --app-cursor:url("assets/cursor-mascot.cur?v=leaf3") 12 2, url("assets/cursor-mascot.png?v=leaf3") 12 2;
   --ink:#1a1f1b;
   --ink2:#3d4a3f;
   --ink3:#6b7c6d;
@@ -43,35 +39,6 @@ body{
   height:100dvh;
   overflow:hidden;
   position:relative;
-}
-*,
-*::before,
-*::after{
-  cursor:var(--app-cursor),auto !important;
-}
-a,
-button,
-select,
-input,
-textarea,
-[role="button"],
-.search-pill,
-.eco-pill,
-.btn-setting,
-.sp-close,
-.btn-run,
-.btn-cancel,
-.btn-ok,
-.date-chip,
-.landing-btn,
-.region-card,
-.access-card,
-.tl-card-btn,
-.crowd-row,
-.t-tab,
-.peek-chip-btn,
-.eco-pin{
-  cursor:var(--app-cursor),pointer !important;
 }
 /* ── MAP ── */
 #map-wrap{position:fixed;inset:0;z-index:0}
@@ -284,6 +251,21 @@ textarea,
 .tl-card-btn:hover{
   transform:translateY(-1px);background:#fff;
   box-shadow:0 8px 22px rgba(45,90,61,.08);
+}
+.tl-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.tl-action-link{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:36px;padding:9px 12px;border-radius:12px;
+  background:#fff;border:1px solid rgba(82,160,106,.22);
+  color:var(--moss);font-size:11px;font-weight:700;text-decoration:none;
+  transition:transform .18s,box-shadow .18s,background .18s;
+}
+.tl-action-link:hover{
+  transform:translateY(-1px);
+  box-shadow:0 8px 20px rgba(45,90,61,.08);
+}
+.tl-action-link.secondary{
+  background:rgba(82,160,106,.12);
 }
 .tl-when{font-size:11px;font-weight:600;color:var(--ink4);letter-spacing:.06em;text-transform:uppercase}
 .tl-title{font-family:'Noto Serif KR',serif;font-size:15px;font-weight:700;margin-top:3px}
@@ -1188,6 +1170,26 @@ function getLockerSummary(key){
   },{locations:0,avail:0,total:0});
 }
 
+function getKakaoMode(){
+  const selected=document.getElementById('mtype')?.value||'walk';
+  if(selected==='bike')return'bicycle';
+  if(selected==='walk')return'walk';
+  return'walk';
+}
+
+function buildKakaoPlaceUrl(spot){
+  return `https://map.kakao.com/link/to/${encodeURIComponent(spot.n)},${spot.lat},${spot.lng}`;
+}
+
+function buildKakaoDirectionsUrl(spot,index){
+  if(index===0){
+    return buildKakaoPlaceUrl(spot);
+  }
+  const from=courseD[index-1];
+  const mode=getKakaoMode();
+  return `https://map.kakao.com/link/by/${mode}/${encodeURIComponent(from.n)},${from.lat},${from.lng}/${encodeURIComponent(spot.n)},${spot.lat},${spot.lng}`;
+}
+
 function getBestRegionKey(){
   const source=(crowdD.length?crowdD:Object.keys(RG).map(key=>getCrowdEntry(key))).slice();
   source.sort((a,b)=>(a.visitors||0)-(b.visitors||0));
@@ -1410,6 +1412,10 @@ function renderCourse(){
           ${renderBusInfo(item)}
           <div class="tl-cta">지도에서 보기</div>
         </button>
+        <div class="tl-actions">
+          <a class="tl-action-link secondary" href="${buildKakaoPlaceUrl(item)}" target="_blank" rel="noopener noreferrer">카카오맵에서 장소 열기</a>
+          <a class="tl-action-link" href="${buildKakaoDirectionsUrl(item,i)}" target="_blank" rel="noopener noreferrer">${i===0?'이 장소로 길찾기':'이전 코스에서 길찾기'}</a>
+        </div>
       </div>
     </div>`;
   });
