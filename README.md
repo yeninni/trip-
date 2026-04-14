@@ -29,3 +29,7 @@ curl -s http://127.0.0.1:8001/health
 ```bash
 ./scripts/run_demo.sh stop
 ```
+
+## Git workflow
+
+브랜치/커밋/푸시 운영 기준은 [docs/GIT_WORKFLOW.md](/c:/Users/jaseo/trip-/docs/GIT_WORKFLOW.md)에 정리되어 있습니다.
