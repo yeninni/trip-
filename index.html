@@ -44,16 +44,16 @@ body{
   position:relative;
 }
 .app-shell{
-  width:min(var(--layout-max),calc(100vw - var(--frame-gap)*2));
-  margin:122px 0 42px var(--frame-gap);
+  width:min(1500px,calc(100vw - var(--frame-gap)*2));
+  margin:122px auto 42px;
   display:grid;
-  grid-template-columns:minmax(480px,1.08fr) minmax(360px,.92fr);
+  grid-template-columns:minmax(380px,1.02fr) minmax(340px,.84fr) minmax(250px,.54fr);
   gap:22px;
   align-items:start;
 }
 /* ── MAP ── */
 #map-wrap{
-  position:sticky;top:118px;z-index:120;
+  position:relative;z-index:120;
   height:calc(100dvh - 140px);min-height:560px;overflow:hidden;border-radius:30px;
   border:1px solid rgba(255,255,255,.82);
   background:linear-gradient(160deg,rgba(232,244,240,.96),rgba(245,242,236,.94));
@@ -204,15 +204,20 @@ body{
 .sheet-bg.open{background:rgba(26,31,27,.35);pointer-events:all}
 
 .sheet{
-  position:relative;z-index:500;
+  position:relative;z-index:40;
   background:var(--paper);
   border-radius:28px;
   box-shadow:0 16px 42px rgba(45,90,61,.16);
   transform:none!important;
   transition:box-shadow .25s ease;
-  min-height:calc(100dvh - 140px);
+  min-height:0;
+  align-self:start;
   display:flex;flex-direction:column;
   border:1px solid rgba(255,255,255,.8);
+}
+.side-rail{
+  display:flex;flex-direction:column;gap:12px;
+  position:relative;top:auto;z-index:140;
 }
 .sheet.peek,.sheet.half,.sheet.full{transform:none!important}
 
@@ -558,54 +563,81 @@ body{
 .access-title{font-size:14px;font-weight:700;color:var(--ink);margin-top:2px}
 .access-copy{font-size:12px;color:var(--ink3);margin-top:4px}
 .access-arrow{font-size:20px;color:var(--moss)}
-.festival-list{
+.info-split{
   padding:12px 20px 0;
-  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+  display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.95fr);gap:12px;
 }
-.festival-card{
-  border-radius:20px;padding:16px;
-  background:linear-gradient(155deg,rgba(255,255,255,.84),rgba(232,244,240,.72));
+.info-panel{
+  border-radius:22px;padding:16px 16px 14px;
+  background:rgba(255,255,255,.78);
   border:1px solid rgba(255,255,255,.86);
   box-shadow:0 10px 24px rgba(45,90,61,.07);
 }
-.festival-badge{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:6px 10px;border-radius:999px;
-  background:rgba(82,160,106,.14);color:var(--moss);
-  font-size:10px;font-weight:700;letter-spacing:.04em;
+.side-rail .info-panel{
+  padding:16px 14px 14px;
+}
+.info-panel-head{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
+  margin-bottom:12px;
+}
+.info-panel-title{
+  font-family:'Noto Serif KR',serif;font-size:16px;font-weight:700;color:var(--ink);
+}
+.info-panel-note{
+  font-size:10px;color:var(--ink4);line-height:1.5;text-align:right;
+}
+.festival-schedule{display:flex;flex-direction:column;gap:8px}
+.festival-row{
+  display:grid;grid-template-columns:82px 1fr auto;gap:10px;align-items:center;
+  padding:11px 12px;border-radius:16px;background:rgba(232,244,240,.7);
+  border:1px solid rgba(255,255,255,.88);
+}
+.festival-date{
+  font-size:11px;font-weight:800;color:var(--moss);letter-spacing:.02em;
 }
 .festival-name{
-  margin-top:10px;font-family:'Noto Serif KR',serif;font-size:15px;font-weight:700;color:var(--ink);
+  font-size:13px;font-weight:700;color:var(--ink);
 }
-.festival-meta{margin-top:6px;font-size:11px;color:var(--ink3);line-height:1.6}
-.festival-copy{margin-top:10px;font-size:12px;color:var(--ink2);line-height:1.65}
+.festival-meta{
+  margin-top:3px;font-size:11px;color:var(--ink3);line-height:1.5;
+}
+.festival-chip{
+  padding:6px 9px;border-radius:999px;background:rgba(82,160,106,.14);
+  color:var(--moss);font-size:10px;font-weight:700;white-space:nowrap;
+}
 .festival-foot{
-  margin-top:12px;font-size:10px;color:var(--ink4);font-weight:600;
+  margin-top:10px;font-size:10px;color:var(--ink4);line-height:1.55;
 }
-.locker-preview-grid{
-  padding:12px 20px 0;
-  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+.locker-preview-table-wrap{
+  border-radius:16px;overflow:hidden;border:1px solid rgba(228,224,213,.92);
+  background:rgba(245,242,236,.7);
 }
-.locker-preview-card{
-  padding:16px;border-radius:20px;background:rgba(255,255,255,.72);
-  border:1px solid rgba(255,255,255,.84);
-  box-shadow:0 10px 24px rgba(45,90,61,.06);
+.locker-preview-table{
+  width:100%;border-collapse:collapse;font-size:11px;
 }
-.locker-preview-top{
-  display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+.locker-preview-table th,
+.locker-preview-table td{
+  padding:11px 12px;text-align:left;border-bottom:1px solid rgba(228,224,213,.9);
+  vertical-align:middle;
 }
-.locker-preview-name{font-size:13px;font-weight:700;color:var(--ink)}
-.locker-preview-addr{margin-top:4px;font-size:11px;color:var(--ink4);line-height:1.5}
-.locker-preview-badge{
-  flex-shrink:0;padding:6px 9px;border-radius:999px;font-size:10px;font-weight:700;
+.locker-preview-table tr:last-child td{border-bottom:none}
+.locker-preview-table th{
+  font-size:10px;font-weight:800;color:var(--ink4);letter-spacing:.05em;text-transform:uppercase;
+  background:rgba(255,255,255,.78);
 }
-.locker-preview-badge.ok{background:#dcfce7;color:#166534}
-.locker-preview-badge.full{background:#fee2e2;color:#991b1b}
-.locker-preview-meter{
-  margin-top:12px;height:6px;border-radius:999px;background:var(--paper3);overflow:hidden;
+.locker-preview-name{font-size:12px;font-weight:700;color:var(--ink)}
+.locker-preview-sub{display:block;margin-top:3px;font-size:10px;color:var(--ink4)}
+.locker-preview-cap{font-weight:700;color:var(--ink2)}
+.locker-preview-state{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:48px;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:800;
 }
-.locker-preview-fill{height:100%;border-radius:999px}
-.locker-preview-copy{margin-top:8px;font-size:11px;color:var(--ink3);line-height:1.55}
+.locker-preview-state.ok{background:#dcfce7;color:#166534}
+.locker-preview-state.warn{background:#fef3c7;color:#854d0e}
+.locker-preview-state.full{background:#fee2e2;color:#991b1b}
+.locker-preview-hint{
+  margin-top:10px;font-size:10px;color:var(--ink4);line-height:1.55;
+}
 .skel{border-radius:14px;background:linear-gradient(90deg,var(--paper2) 25%,var(--paper3) 50%,var(--paper2) 75%);background-size:200%;animation:sk 1.2s infinite}
 @keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
@@ -662,13 +694,12 @@ body{
     --frame-gap:24px;
   }
   .landing-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .festival-list,.locker-preview-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 
 @media(max-width:1080px){
   .app-shell{
     width:calc(100vw - var(--frame-gap)*2);
-    margin:118px var(--frame-gap) 34px;
+    margin:118px auto 34px;
     grid-template-columns:1fr;
   }
   #map-wrap{
@@ -676,8 +707,12 @@ body{
     height:340px;min-height:340px;
   }
   .sheet{
-    min-height:auto;
+    min-height:0;
   }
+  .side-rail{
+    position:relative;top:auto;
+  }
+  .info-split{grid-template-columns:1fr}
 }
 
 @media(max-width:560px){
@@ -694,9 +729,13 @@ body{
   .map-frame-title{font-size:18px}
   .map-frame-sub{font-size:11px;max-width:170px}
   .map-frame-badge{min-width:92px;padding:8px 12px}
-  .festival-list,.locker-preview-grid{grid-template-columns:1fr}
   .section-head{display:block}
   .section-note{margin-top:4px;text-align:left}
+  .info-panel-head{display:block}
+  .info-panel-note{margin-top:4px;text-align:left}
+  .festival-row{grid-template-columns:1fr;gap:6px}
+  .locker-preview-table th:nth-child(2),
+  .locker-preview-table td:nth-child(2){display:none}
 }
 
 /* ── MAP MARKER ── */
@@ -809,6 +848,8 @@ body{
       </div>
     </div>
   </div>
+
+  <aside class="side-rail" id="sideRail"></aside>
 </main>
 
 <!-- SEARCH PANEL -->
@@ -956,28 +997,28 @@ const LOCKERS={
 };
 const FESTIVALS={
   yeosu:[
-    {season:'봄·초여름',name:'해양 야경 페스타',place:'이순신광장 · 해양공원',copy:'밤바다 산책, 버스킹, 해상 포토스팟을 묶어 보기 좋은 시즌형 행사예요.'},
-    {season:'가을',name:'섬·바다 문화주간',place:'오동도 · 엑스포 일대',copy:'섬 산책과 바다 전망 코스를 느긋하게 연결하기 좋은 분위기예요.'},
+    {season:'봄·초여름',date:'2026.04.18 - 04.20',name:'해양 야경 페스타',place:'이순신광장 · 해양공원',copy:'밤바다 산책, 버스킹, 해상 포토스팟을 묶어 보기 좋은 시즌형 행사예요.'},
+    {season:'가을',date:'2026.05.02 - 05.04',name:'섬·바다 문화주간',place:'오동도 · 엑스포 일대',copy:'섬 산책과 바다 전망 코스를 느긋하게 연결하기 좋은 분위기예요.'},
   ],
   suncheon:[
-    {season:'봄',name:'정원 테마 페스티벌',place:'순천만국가정원',copy:'꽃과 정원 전시가 중심이라 낮 시간 산책 동선과 잘 맞아요.'},
-    {season:'가을',name:'습지 생태 체험주간',place:'순천만 습지 일대',copy:'갈대 풍경과 생태 체험 프로그램을 함께 보기 좋은 계절 포인트예요.'},
+    {season:'봄',date:'2026.04.19 - 04.27',name:'정원 테마 페스티벌',place:'순천만국가정원',copy:'꽃과 정원 전시가 중심이라 낮 시간 산책 동선과 잘 맞아요.'},
+    {season:'가을',date:'2026.05.10 - 05.12',name:'습지 생태 체험주간',place:'순천만 습지 일대',copy:'갈대 풍경과 생태 체험 프로그램을 함께 보기 좋은 계절 포인트예요.'},
   ],
   damyang:[
-    {season:'봄',name:'대나무 힐링 페어',place:'죽녹원 · 관방제림',copy:'숲길 걷기와 로컬 먹거리를 함께 즐기기 좋은 대표 시즌이에요.'},
-    {season:'가을',name:'정원·산책 주간',place:'메타세쿼이아길',copy:'서늘한 계절에 라이딩과 산책을 묶기 좋은 분위기로 바뀌어요.'},
+    {season:'봄',date:'2026.04.21 - 04.23',name:'대나무 힐링 페어',place:'죽녹원 · 관방제림',copy:'숲길 걷기와 로컬 먹거리를 함께 즐기기 좋은 대표 시즌이에요.'},
+    {season:'가을',date:'2026.05.01 - 05.05',name:'정원·산책 주간',place:'메타세쿼이아길',copy:'서늘한 계절에 라이딩과 산책을 묶기 좋은 분위기로 바뀌어요.'},
   ],
   mokpo:[
-    {season:'봄',name:'항구 문화 페스타',place:'근대역사관 · 평화광장',copy:'근대거리 산책과 해양 야경을 묶은 문화 프로그램 흐름과 잘 어울려요.'},
-    {season:'여름',name:'야경 뮤직 나이트',place:'평화광장 해변',copy:'낮에는 역사 코스, 밤에는 공연과 야경으로 연결하기 좋은 구성이에요.'},
+    {season:'봄',date:'2026.04.25 - 04.27',name:'항구 문화 페스타',place:'근대역사관 · 평화광장',copy:'근대거리 산책과 해양 야경을 묶은 문화 프로그램 흐름과 잘 어울려요.'},
+    {season:'여름',date:'2026.05.16 - 05.17',name:'야경 뮤직 나이트',place:'평화광장 해변',copy:'낮에는 역사 코스, 밤에는 공연과 야경으로 연결하기 좋은 구성이에요.'},
   ],
   boseong:[
-    {season:'봄',name:'녹차 시즌 페스티벌',place:'보성차밭 일대',copy:'차밭 풍경이 가장 살아나는 시기라 사진과 산책 만족도가 높아요.'},
-    {season:'여름',name:'해안 힐링 위크',place:'율포 해변',copy:'바다와 차밭을 함께 묶어 여유로운 하루 코스로 만들기 좋아요.'},
+    {season:'봄',date:'2026.04.17 - 04.20',name:'녹차 시즌 페스티벌',place:'보성차밭 일대',copy:'차밭 풍경이 가장 살아나는 시기라 사진과 산책 만족도가 높아요.'},
+    {season:'여름',date:'2026.05.08 - 05.10',name:'해안 힐링 위크',place:'율포 해변',copy:'바다와 차밭을 함께 묶어 여유로운 하루 코스로 만들기 좋아요.'},
   ],
   gangjin:[
-    {season:'봄',name:'청자 문화 주간',place:'청자박물관 일대',copy:'도예 체험, 전시, 로컬 마켓이 함께 어우러지는 대표 문화 시즌이에요.'},
-    {season:'가을',name:'역사 산책 페스티벌',place:'다산초당 · 가우도',copy:'역사 명소와 해안 걷기를 연결해 묵직한 분위기의 여행을 만들기 좋아요.'},
+    {season:'봄',date:'2026.04.23 - 04.26',name:'청자 문화 주간',place:'청자박물관 일대',copy:'도예 체험, 전시, 로컬 마켓이 함께 어우러지는 대표 문화 시즌이에요.'},
+    {season:'가을',date:'2026.05.14 - 05.16',name:'역사 산책 페스티벌',place:'다산초당 · 가우도',copy:'역사 명소와 해안 걷기를 연결해 묵직한 분위기의 여행을 만들기 좋아요.'},
   ],
 };
 
@@ -1402,35 +1443,70 @@ function renderFestivalSection(key,limit=2){
   if(!items.length){
     return `<div class="empty" style="padding-top:18px"><div class="empty-s">대표 축제 정보를 준비 중이에요.</div></div>`;
   }
-  return `<div class="festival-list">${items.map(item=>`
-    <div class="festival-card">
-      <div class="festival-badge">축제 정보 · ${item.season}</div>
-      <div class="festival-name">${item.name}</div>
-      <div class="festival-meta">📍 ${item.place}</div>
-      <div class="festival-copy">${item.copy}</div>
-      <div class="festival-foot">운영 시기와 세부 일정은 해마다 달라질 수 있어요</div>
+  return `<div class="info-panel">
+    <div class="info-panel-head">
+      <div class="info-panel-title">다가오는 축제 일정</div>
+      <div class="info-panel-note">API 연동 전 예시 일정이에요</div>
     </div>
-  `).join('')}</div>`;
+    <div class="festival-schedule">${items.map(item=>`
+      <div class="festival-row">
+        <div class="festival-date">${item.date||item.season}</div>
+        <div>
+          <div class="festival-name">${item.name}</div>
+          <div class="festival-meta">📍 ${item.place} · ${item.copy}</div>
+        </div>
+        <div class="festival-chip">${item.season}</div>
+      </div>
+    `).join('')}</div>
+    <div class="festival-foot">실제 배포 단계에서는 축제 API 데이터로 자동 갱신할 예정입니다.</div>
+  </div>`;
 }
 
 function renderLockerPreviewSection(items){
   if(!items.length){
     return `<div class="empty" style="padding-top:18px"><div class="empty-s">코스를 찾으면 지역 보관함 여유 현황을 보여드려요.</div></div>`;
   }
-  return `<div class="locker-preview-grid">${items.map(item=>{
-    const pct=item.total?Math.round(item.avail/item.total*100):0;
-    return `<div class="locker-preview-card">
-      <div class="locker-preview-top">
-        <div>
-          <div class="locker-preview-name">${item.n}</div>
-          <div class="locker-preview-addr">📍 ${item.addr}</div>
-        </div>
-        <div class="locker-preview-badge ${item.avail>0?'ok':'full'}">${item.avail>0?'여유':'만석'}</div>
-      </div>
-      <div class="locker-preview-meter"><div class="locker-preview-fill" style="width:${pct}%;background:${item.avail>0?'var(--leaf)':'#ef4444'}"></div></div>
-      <div class="locker-preview-copy">${item.avail>0?`현재 ${item.avail}/${item.total}칸 이용 가능해 짐 맡기고 이동하기 좋아요.`:'현재 만석이라 다른 보관함을 함께 보는 편이 안전해요.'}</div>
-    </div>`;
-  }).join('')}</div>`;
+  return `<div class="info-panel">
+    <div class="info-panel-head">
+      <div class="info-panel-title">짐보관 미리보기</div>
+      <div class="info-panel-note">보관 지점 여유 칸을 한눈에 확인해요</div>
+    </div>
+    <div class="locker-preview-table-wrap">
+      <table class="locker-preview-table">
+        <thead>
+          <tr>
+            <th>보관 지점</th>
+            <th>주소</th>
+            <th>여유 칸</th>
+            <th>상태</th>
+          </tr>
+        </thead>
+        <tbody>${items.map(item=>{
+          const ratio=item.total?item.avail/item.total:0;
+          const state=item.avail===0?'full':ratio<0.35?'warn':'ok';
+          const label=state==='full'?'만석':state==='warn'?'혼잡':'여유';
+          return `<tr>
+            <td><span class="locker-preview-name">${item.n}</span></td>
+            <td><span class="locker-preview-sub">${item.addr}</span></td>
+            <td><span class="locker-preview-cap">${item.avail}/${item.total}칸</span></td>
+            <td><span class="locker-preview-state ${state}">${label}</span></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+    <div class="locker-preview-hint">실제 연동 단계에서는 지역별 실시간 보관함 여유 데이터로 교체됩니다.</div>
+  </div>`;
+}
+
+function renderSideRail(key,items){
+  const target=document.getElementById('sideRail');
+  if(!target)return;
+  const activeKey=key&&RG[key]?key:getBestRegionKey();
+  const sourceItems=(items&&items.length)?items:(LOCKERS[activeKey]||[]);
+  target.innerHTML=`
+    ${renderFestivalSection(activeKey,3)}
+    ${renderLockerPreviewSection(sourceItems)}
+  `;
 }
 
 function setActiveTab(name){
@@ -1467,6 +1543,7 @@ function updatePeek(key=curRegion){
 function renderLandingState(){
   const key=curRegion&&RG[curRegion]?curRegion:getBestRegionKey();
   const featured=RG[key];
+  renderSideRail(key,LOCKERS[key]||[]);
   document.getElementById('sheetBody').innerHTML=`
     <div class="landing">
       <div class="landing-hero">
@@ -1509,16 +1586,6 @@ function renderLandingState(){
           </button>`;
         }).join('')}
       </div>
-      <div class="section-head">
-        <div class="section-title">${featured.n} 대표 축제</div>
-        <div class="section-note">대표 시즌 분위기를 먼저 보고<br>여행 날짜를 정해보세요</div>
-      </div>
-      ${renderFestivalSection(key,2)}
-      <div class="section-head">
-        <div class="section-title">짐보관 현황 미리보기</div>
-        <div class="section-note">코스 검색 전에도 어느 정도<br>보관 거점을 가늠할 수 있어요</div>
-      </div>
-      ${renderLockerPreviewSection(LOCKERS[key]||[])}
     </div>`;
 }
 
@@ -1610,6 +1677,7 @@ function render(){
     renderLandingState();
     return;
   }
+  renderSideRail(curRegion,lockerD);
   const body=document.getElementById('sheetBody');
   if(curTab==='course')body.innerHTML=renderCourse();
   else if(curTab==='crowd')body.innerHTML=renderCrowd();
@@ -1632,16 +1700,6 @@ function renderCourse(){
     <div class="sum-cell"><div class="sum-val">${courseD.length}</div><div class="sum-key">방문 코스</div></div>
     <div class="sum-cell"><div class="sum-val" style="font-size:13px;color:${lvC};background:${lvBg};padding:4px 8px;border-radius:20px">${lvLbl(lv)}</div><div class="sum-key">혼잡 수준</div></div>
   </div>
-  <div class="section-head">
-    <div class="section-title">축제 정보</div>
-    <div class="section-note">지역 분위기를 더 느끼고 싶을 때<br>코스 중간에 묶기 좋은 시즌 포인트예요</div>
-  </div>
-  ${renderFestivalSection(rk,2)}
-  <div class="section-head">
-    <div class="section-title">짐보관 현황</div>
-    <div class="section-note">보관 가능한 지점을 먼저 보고<br>가벼운 동선으로 이동해보세요</div>
-  </div>
-  ${renderLockerPreviewSection(lockerD)}
   <button class="access-card" onclick="openLockerTab()">
     <div>
       <div class="access-kicker">보관함 빠른 이동</div>
