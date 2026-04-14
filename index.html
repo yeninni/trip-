@@ -4,8 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>전남 ECO 여행</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=2b7cc9d4e759fe9920ab0d6787224f71&autoload=false"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -41,18 +40,26 @@ body{
 /* ── MAP ── */
 #map-wrap{position:fixed;inset:0;z-index:0}
 #map{width:100%;height:100%}
-.leaflet-control-attribution{display:none!important}
-.leaflet-control-zoom{margin-bottom:180px!important;margin-right:16px!important}
-.leaflet-control-zoom a{
-  background:rgba(245,242,236,.92)!important;
-  border:none!important;
-  color:var(--ink)!important;
-  font-size:16px!important;
-  width:36px!important;height:36px!important;
-  line-height:36px!important;
-  border-radius:12px!important;
-  box-shadow:0 2px 12px rgba(0,0,0,.1)!important;
+.eco-pin-wrap{
+  border:none;
+  background:transparent;
+  padding:0;
+  cursor:pointer;
+  transform:translateY(-19px);
 }
+.eco-pin-wrap:focus{outline:none}
+.eco-pin-wrap .eco-pin{pointer-events:none}
+.map-fallback{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  padding:24px;background:linear-gradient(180deg,rgba(245,242,236,.82),rgba(245,242,236,.96));
+}
+.map-fallback-card{
+  max-width:420px;padding:24px 22px;border-radius:24px;text-align:center;
+  background:rgba(255,255,255,.58);border:1px solid rgba(255,255,255,.8);
+  box-shadow:0 10px 40px rgba(45,90,61,.12);backdrop-filter:blur(12px);
+}
+.map-fallback-card h3{font-family:'Noto Serif KR',serif;font-size:20px;margin-bottom:10px}
+.map-fallback-card p{font-size:13px;line-height:1.7;color:var(--ink2)}
 
 /* ── TOP ── */
 .topbar{
@@ -652,6 +659,7 @@ const storedApiKey=localStorage.getItem('tapi');
 let API_KEY=storedApiKey===null?DEFAULT_API_KEY:storedApiKey;
 const BUS_API_KEY=DEFAULT_BUS_API_KEY;
 let map,markers=[],lines=[],courseMarkers=[];
+let mapInfoWindow=null;
 let curTab='course',curRegion=null;
 let crowdD=[],courseD=[],lockerD=[];
 
@@ -729,57 +737,106 @@ const LOCKERS={
   gangjin: [{n:'강진버스터미널 보관함',addr:'강진군 탐진로 36',avail:7,total:10}],
 };
 
+function makeLatLng(lat,lng){
+  return new kakao.maps.LatLng(lat,lng);
+}
+
+function mapFallback(){
+  document.getElementById('map').innerHTML=`<div class="map-fallback"><div class="map-fallback-card"><h3>카카오맵을 불러오지 못했습니다</h3><p>JavaScript 키 또는 등록 도메인을 확인해 주세요.<br><b>http://127.0.0.1:8001</b><br><b>http://localhost:8001</b></p></div></div>`;
+}
+
 function initMap(){
-  map=L.map('map',{zoomControl:false,attributionControl:false}).setView([34.87,126.99],8);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
-  L.control.zoom({position:'bottomright'}).addTo(map);
+  if(!(window.kakao&&window.kakao.maps))return false;
+  map=new kakao.maps.Map(document.getElementById('map'),{
+    center:makeLatLng(34.87,126.99),
+    level:13,
+  });
+  map.addControl(new kakao.maps.ZoomControl(),kakao.maps.ControlPosition.RIGHT);
+  mapInfoWindow=new kakao.maps.InfoWindow({removable:false});
   plotOverview();
+  return true;
 }
 
 function clearMap(){
-  markers.forEach(m=>map.removeLayer(m));
-  lines.forEach(l=>map.removeLayer(l));
+  markers.forEach(item=>item.setMap(null));
+  lines.forEach(item=>item.setMap(null));
   markers=[];lines=[];courseMarkers=[];
+  if(mapInfoWindow)mapInfoWindow.close();
+}
+
+function moveMap(lat,lng,level){
+  if(!map)return;
+  map.setLevel(level);
+  map.panTo(makeLatLng(lat,lng));
+}
+
+function openMapInfo(lat,lng,title,body){
+  if(!mapInfoWindow)return;
+  mapInfoWindow.setPosition(makeLatLng(lat,lng));
+  mapInfoWindow.setContent(`<div style="padding:10px 12px;min-width:180px"><div style="font-family:'Noto Serif KR',serif;font-size:14px;font-weight:700;color:#1a1f1b">${title}</div><div style="margin-top:4px;font-size:12px;color:#5b675d;line-height:1.45">${body}</div></div>`);
+  mapInfoWindow.open(map);
+}
+
+function createOverlayMarker(lat,lng,emoji,bg,onClick){
+  const button=document.createElement('button');
+  button.type='button';
+  button.className='eco-pin-wrap';
+  button.innerHTML=`<div class="eco-pin" style="background:${bg};font-size:17px">${emoji}</div>`;
+  button.addEventListener('click',e=>{
+    e.stopPropagation();
+    onClick();
+  });
+  const overlay=new kakao.maps.CustomOverlay({
+    position:makeLatLng(lat,lng),
+    content:button,
+    yAnchor:1,
+  });
+  overlay.setMap(map);
+  markers.push(overlay);
+  return overlay;
 }
 
 function plotOverview(focusKey=null){
+  if(!map)return;
   clearMap();
   Object.entries(RG).forEach(([key,ri])=>{
-    const ic=L.divIcon({
-      html:`<div class="eco-pin" style="background:${ri.bg};font-size:17px">${ri.e}</div>`,
-      iconSize:[38,38],iconAnchor:[19,19],className:'',
+    createOverlayMarker(ri.lat,ri.lng,ri.e,ri.bg,()=>{
+      openMapInfo(ri.lat,ri.lng,ri.n,ri.sub);
+      previewRegion(key);
     });
-    const mk=L.marker([ri.lat,ri.lng],{icon:ic}).addTo(map);
-    mk.bindPopup(`<b style="font-family:'Noto Serif KR',serif;font-size:14px">${ri.n}</b><br><small style="color:#666">${ri.sub}</small>`);
-    mk.on('click',()=>previewRegion(key));
-    markers.push(mk);
-    if(key===focusKey)mk.openPopup();
+    if(key===focusKey)openMapInfo(ri.lat,ri.lng,ri.n,ri.sub);
   });
-  if(focusKey&&RG[focusKey])map.flyTo([RG[focusKey].lat,RG[focusKey].lng],10,{duration:.8});
-  else map.flyTo([34.87,126.99],8,{duration:.8});
+  if(focusKey&&RG[focusKey])moveMap(RG[focusKey].lat,RG[focusKey].lng,11);
+  else moveMap(34.87,126.99,13);
 }
 
 function plotCourse(spots){
+  if(!map)return;
   clearMap();
-  const lls=[];
+  const path=[];
+  const bounds=new kakao.maps.LatLngBounds();
   spots.forEach(s=>{
-    const ll=[s.lat,s.lng];
-    lls.push(ll);
-    const ic=L.divIcon({
-      html:`<div class="eco-pin" style="background:${s.bg};font-size:17px">${s.e}</div>`,
-      iconSize:[38,38],iconAnchor:[19,19],className:'',
+    const position=makeLatLng(s.lat,s.lng);
+    path.push(position);
+    bounds.extend(position);
+    const overlay=createOverlayMarker(s.lat,s.lng,s.e,s.bg,()=>{
+      openMapInfo(s.lat,s.lng,s.n,s.d);
     });
-    const mk=L.marker(ll,{icon:ic}).addTo(map);
-    mk.bindPopup(`<b style="font-family:'Noto Serif KR',serif;font-size:14px">${s.n}</b><br><small style="color:#666">${s.d}</small>`);
-    markers.push(mk);
-    courseMarkers.push(mk);
+    courseMarkers.push({overlay,spot:s});
   });
-  if(lls.length>1){
-    const pl=L.polyline(lls,{color:'#52a06a',weight:3,dashArray:'9 7',opacity:.7}).addTo(map);
-    lines.push(pl);
-    map.fitBounds(pl.getBounds(),{paddingTopLeft:[20,130],paddingBottomRight:[24,220]});
-  }else if(lls.length===1){
-    map.flyTo(lls[0],13,{duration:.8});
+  if(path.length>1){
+    const line=new kakao.maps.Polyline({
+      path,
+      strokeWeight:4,
+      strokeColor:'#52a06a',
+      strokeOpacity:0.8,
+      strokeStyle:'shortdash',
+    });
+    line.setMap(map);
+    lines.push(line);
+    map.setBounds(bounds);
+  }else if(path.length===1){
+    moveMap(spots[0].lat,spots[0].lng,8);
   }
 }
 
@@ -1183,8 +1240,8 @@ function focusSpot(index){
   const marker=courseMarkers[index];
   const spot=courseD[index];
   if(!marker||!spot)return;
-  map.flyTo([spot.lat,spot.lng],13,{duration:.8});
-  marker.openPopup();
+  moveMap(spot.lat,spot.lng,8);
+  openMapInfo(spot.lat,spot.lng,spot.n,spot.d);
   toast(`📍 ${spot.n} 위치를 지도에서 열었어요`);
 }
 
@@ -1256,7 +1313,17 @@ document.addEventListener('touchmove',e=>{
 document.addEventListener('touchend',()=>{drag.on=false});
 
 document.addEventListener('DOMContentLoaded',()=>{
-  initMap();
+  if(window.kakao&&window.kakao.maps&&typeof window.kakao.maps.load==='function'){
+    window.kakao.maps.load(()=>{
+      if(!initMap()){
+        mapFallback();
+        toast('⚠️ 카카오맵을 불러오지 못했습니다');
+      }
+    });
+  }else if(!initMap()){
+    mapFallback();
+    toast('⚠️ 카카오맵을 불러오지 못했습니다');
+  }
   document.getElementById('tdate').value=formatInputDate(new Date());
   document.getElementById('tdate').addEventListener('change',syncDatePreset);
   syncDatePreset();
