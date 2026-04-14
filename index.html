@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>전남 ECO 여행</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -41,18 +39,30 @@ body{
 /* ── MAP ── */
 #map-wrap{position:fixed;inset:0;z-index:0}
 #map{width:100%;height:100%}
-.leaflet-control-attribution{display:none!important}
-.leaflet-control-zoom{margin-bottom:180px!important;margin-right:16px!important}
-.leaflet-control-zoom a{
-  background:rgba(245,242,236,.92)!important;
-  border:none!important;
-  color:var(--ink)!important;
-  font-size:16px!important;
-  width:36px!important;height:36px!important;
-  line-height:36px!important;
-  border-radius:12px!important;
-  box-shadow:0 2px 12px rgba(0,0,0,.1)!important;
+.map-empty{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;
+  background:
+    radial-gradient(circle at 20% 20%,rgba(123,196,145,.28),transparent 34%),
+    linear-gradient(160deg,#edf4ec,#dce9e1);
 }
+.map-empty-card{
+  width:min(360px,100%);
+  padding:22px 20px;
+  border-radius:24px;
+  background:rgba(245,242,236,.94);
+  border:1px solid rgba(255,255,255,.75);
+  box-shadow:0 18px 48px rgba(45,90,61,.16);
+  text-align:center;
+}
+.map-empty-card strong{
+  display:block;
+  font-family:'Noto Serif KR',serif;
+  font-size:18px;
+  margin-bottom:8px;
+}
+.map-empty-card p{font-size:13px;line-height:1.6;color:var(--ink2)}
 
 /* ── TOP ── */
 .topbar{
@@ -365,6 +375,9 @@ body{
 .modal-wrap.open .modal{transform:translateY(0)}
 .modal-t{font-family:'Noto Serif KR',serif;font-size:18px;font-weight:700;margin-bottom:8px}
 .modal p{font-size:13px;color:var(--ink2);line-height:1.65;margin-bottom:16px}
+.modal-help{font-size:13px;color:var(--ink2);line-height:1.65;margin-bottom:12px}
+.modal-help a{color:var(--leaf)}
+.modal-sub{font-size:12px;font-weight:700;color:var(--moss);margin:12px 0 6px}
 .modal input{
   width:100%;padding:12px 14px;border-radius:14px;
   border:1.5px solid var(--paper3);background:var(--paper2);
@@ -407,6 +420,7 @@ body{
   border:2.5px solid rgba(255,255,255,.9);
   box-shadow:0 3px 14px rgba(0,0,0,.2);
 }
+.eco-pin-btn{cursor:pointer;font-family:inherit;padding:0;color:inherit}
 </style>
 </head>
 <body>
@@ -518,8 +532,13 @@ body{
 <div class="modal-wrap" id="apiModal">
   <div class="modal">
     <div class="modal-t">🔑 API 키 설정</div>
-    <p>한국관광공사 TourAPI 4.0 서비스키를 입력하면 실제 혼잡도 데이터로 동작합니다. 키 없이도 샘플 데이터로 체험 가능합니다.<br><br>발급: <a href="https://api.visitkorea.or.kr" target="_blank" style="color:var(--leaf)">api.visitkorea.or.kr</a></p>
+    <p class="modal-help">카카오맵은 JavaScript 키가 있어야 지도가 표시됩니다. TourAPI 키는 혼잡도 실데이터 연결용이라 없어도 샘플 데이터로 체험 가능합니다.</p>
+    <div class="modal-sub">Kakao Maps JavaScript Key</div>
+    <input type="text" id="kakaoKeyInput" placeholder="JavaScript 키 입력">
+    <div class="modal-help">발급: <a href="https://developers.kakao.com" target="_blank">developers.kakao.com</a></div>
+    <div class="modal-sub">TourAPI 4.0 Service Key</div>
     <input type="text" id="keyInput" placeholder="서비스키 (Decoding 키 입력)">
+    <div class="modal-help">발급: <a href="https://api.visitkorea.or.kr" target="_blank">api.visitkorea.or.kr</a></div>
     <div class="modal-row">
       <button class="btn-cancel" onclick="closeModal()">취소</button>
       <button class="btn-ok" onclick="saveKey()">저장</button>
@@ -530,9 +549,11 @@ body{
 <script>
 // ═══════════════ DATA ═══════════════
 let API_KEY=localStorage.getItem('tapi')||'';
-let map,markers=[],lines=[];
+let KAKAO_MAP_KEY=localStorage.getItem('kakao_js_key')||'2b7cc9d4e759fe9920ab0d6787224f71';
+let map,markers=[],lines=[],infoWindows=[];
 let curTab='course',curRegion=null;
 let crowdD=[],courseD=[],lockerD=[];
+const MAP_CENTER={lat:34.87,lng:126.99,level:9};
 
 const RG={
   yeosu:   {n:'여수',  e:'🌊',sub:'해안·야경',  theme:'바다', lat:34.7604,lng:127.6622,c:'#0ea5e9',bg:'#e0f2fe'},
@@ -610,33 +631,100 @@ const LOCKERS={
 
 // ═══════════════ MAP ═══════════════
 function initMap(){
-  map=L.map('map',{zoomControl:false,attributionControl:false}).setView([34.87,126.99],8);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
-  L.control.zoom({position:'bottomright'}).addTo(map);
+  if(!KAKAO_MAP_KEY){
+    renderMapPlaceholder();
+    return;
+  }
+  loadKakaoMaps().then(()=>{
+    const node=document.getElementById('map');
+    node.innerHTML='';
+    map=new kakao.maps.Map(node,{
+      center:new kakao.maps.LatLng(MAP_CENTER.lat,MAP_CENTER.lng),
+      level:MAP_CENTER.level,
+    });
+    const zoomControl=new kakao.maps.ZoomControl();
+    map.addControl(zoomControl,kakao.maps.ControlPosition.RIGHT);
+    if(curRegion&&courseD.length)plotCourse(courseD);
+  }).catch(()=>{
+    map=null;
+    renderMapPlaceholder('Failed to load Kakao Maps SDK. Check the JavaScript key and allowed domain settings.');
+  });
+}
+function loadKakaoMaps(){
+  if(window.kakao?.maps)return Promise.resolve();
+  if(loadKakaoMaps._promise)return loadKakaoMaps._promise;
+  loadKakaoMaps._promise=new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    script.src=`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(KAKAO_MAP_KEY)}&autoload=false`;
+    script.onload=()=>kakao.maps.load(resolve);
+    script.onerror=reject;
+    document.head.appendChild(script);
+  });
+  return loadKakaoMaps._promise;
+}
+function renderMapPlaceholder(msg){
+  document.getElementById('map').innerHTML=`<div class="map-empty">
+    <div class="map-empty-card">
+      <strong>Kakao Maps key required</strong>
+      <p>${msg||'Open Settings and add a Kakao Maps JavaScript key to see the map-based course view.'}</p>
+    </div>
+  </div>`;
+}
+function mapLatLng(lat,lng){
+  return new kakao.maps.LatLng(lat,lng);
+}
+function mapFlyTo(lat,lng,level=5){
+  if(!map||!window.kakao?.maps)return;
+  map.setLevel(level);
+  map.panTo(mapLatLng(lat,lng));
+}
+function openInfo(idx){
+  if(!infoWindows[idx])return;
+  infoWindows.forEach(w=>w.close());
+  infoWindows[idx].open(map);
 }
 function clearMap(){
-  markers.forEach(m=>map.removeLayer(m));
-  lines.forEach(l=>map.removeLayer(l));
-  markers=[];lines=[];
+  markers.forEach(m=>m.setMap(null));
+  lines.forEach(l=>l.setMap(null));
+  infoWindows.forEach(w=>w.close());
+  markers=[];lines=[];infoWindows=[];
 }
 function plotCourse(spots){
+  if(!map||!window.kakao?.maps)return;
   clearMap();
-  const tc={spot:'#16a34a',food:'#d97706',lock:'#7c3aed',stay:'#db2777'};
+  const bounds=new kakao.maps.LatLngBounds();
   const lls=[];
   spots.forEach(s=>{
-    const ll=[s.lat,s.lng];lls.push(ll);
-    const ic=L.divIcon({
-      html:`<div class="eco-pin" style="background:${s.bg};font-size:17px">${s.e}</div>`,
-      iconSize:[38,38],iconAnchor:[19,19],className:'',
+    const ll=mapLatLng(s.lat,s.lng);lls.push(ll);
+    bounds.extend(ll);
+    const idx=infoWindows.length;
+    const overlay=new kakao.maps.CustomOverlay({
+      position:ll,
+      content:`<button type="button" class="eco-pin eco-pin-btn" style="background:${s.bg};font-size:17px" onclick="openInfo(${idx})">${s.e}</button>`,
+      yAnchor:1,
     });
-    const mk=L.marker(ll,{icon:ic}).addTo(map);
-    mk.bindPopup(`<b style="font-family:'Noto Serif KR',serif;font-size:14px">${s.n}</b><br><small style="color:#666">${s.d}</small>`);
-    markers.push(mk);
+    overlay.setMap(map);
+    const info=new kakao.maps.InfoWindow({
+      position:ll,
+      content:`<div style="padding:10px 12px;max-width:220px;line-height:1.5"><b style="font-family:'Noto Serif KR',serif;font-size:14px">${s.n}</b><br><small style="color:#666">${s.d}</small></div>`
+    });
+    markers.push(overlay);
+    infoWindows.push(info);
   });
   if(lls.length>1){
-    const pl=L.polyline(lls,{color:'#52a06a',weight:3,dashArray:'9 7',opacity:.7}).addTo(map);
+    const pl=new kakao.maps.Polyline({
+      path:lls,
+      strokeWeight:4,
+      strokeColor:'#52a06a',
+      strokeOpacity:.75,
+      strokeStyle:'dash',
+    });
+    pl.setMap(map);
     lines.push(pl);
-    map.fitBounds(pl.getBounds(),{paddingTopLeft:[20,130],paddingBottomRight:[24,220]});
+    map.setBounds(bounds,80,220,24,130);
+  }else if(lls.length===1){
+    map.setCenter(lls[0]);
+    map.setLevel(5);
   }
 }
 
@@ -810,13 +898,13 @@ function onPill(el,key){
   document.querySelectorAll('.eco-pill').forEach(p=>p.classList.remove('on'));
   el.classList.add('on');
   if(key&&RG[key]){
-    map.flyTo([RG[key].lat,RG[key].lng],11,{duration:.8});
+    mapFlyTo(RG[key].lat,RG[key].lng,5);
     if(curRegion!==key&&crowdD.length){
       curRegion=key;courseD=COURSES[key]||[];lockerD=LOCKERS[key]||[];
       render();plotCourse(courseD);
     }
   } else {
-    map.flyTo([34.87,126.99],8,{duration:.8});
+    mapFlyTo(MAP_CENTER.lat,MAP_CENTER.lng,MAP_CENTER.level);
   }
 }
 function setPillOn(key){
@@ -835,7 +923,7 @@ async function jumpR(key){
   curTab='course';
   document.querySelectorAll('.t-tab').forEach((t,i)=>t.classList.toggle('on',i===0));
   render();plotCourse(courseD);
-  map.flyTo([ri.lat,ri.lng],11,{duration:.8});
+  mapFlyTo(ri.lat,ri.lng,5);
   toSheet('half');
 }
 function lvLbl(lv){return lv==='low'?'혼잡 낮음':lv==='mid'?'보통':'혼잡 높음'}
@@ -844,13 +932,35 @@ function toast(msg){
   t.textContent=msg;t.classList.add('show');
   clearTimeout(t._);t._=setTimeout(()=>t.classList.remove('show'),3000);
 }
-function openModal(){document.getElementById('apiModal').classList.add('open');document.getElementById('keyInput').value=API_KEY}
+function openModal(){
+  document.getElementById('apiModal').classList.add('open');
+  document.getElementById('keyInput').value=API_KEY;
+  document.getElementById('kakaoKeyInput').value=KAKAO_MAP_KEY;
+}
 function closeModal(){document.getElementById('apiModal').classList.remove('open')}
 document.getElementById('apiModal').addEventListener('click',e=>{if(e.target===document.getElementById('apiModal'))closeModal()});
-function saveKey(){
+function oldSaveKey(){
   const k=document.getElementById('keyInput').value.trim();
   API_KEY=k;k?localStorage.setItem('tapi',k):localStorage.removeItem('tapi');
   closeModal();toast(k?'✅ API 키 저장됨':'🔧 샘플 데이터 모드');
+}
+
+function saveKey(){
+  const tourKey=document.getElementById('keyInput').value.trim();
+  const kakaoKey=document.getElementById('kakaoKeyInput').value.trim();
+  const kakaoChanged=kakaoKey!==KAKAO_MAP_KEY;
+  API_KEY=tourKey;
+  KAKAO_MAP_KEY=kakaoKey;
+  tourKey?localStorage.setItem('tapi',tourKey):localStorage.removeItem('tapi');
+  kakaoKey?localStorage.setItem('kakao_js_key',kakaoKey):localStorage.removeItem('kakao_js_key');
+  if(kakaoChanged){
+    closeModal();
+    toast('Kakao map key updated. Reloading...');
+    setTimeout(()=>window.location.reload(),300);
+    return;
+  }
+  closeModal();
+  toast(kakaoKey?'Kakao map settings saved':'Add a Kakao key to display the map');
 }
 
 // drag
