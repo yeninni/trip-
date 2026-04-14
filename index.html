@@ -5,12 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>전남 ECO 여행</title>
 <link rel="icon" type="image/png" href="assets/eco-mascot.png">
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=2b7cc9d4e759fe9920ab0d6787224f71&autoload=false"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*{
+  cursor:url("assets/cursor-mascot.cur") 12 6, url("assets/cursor-mascot.png") 12 6, auto;
+}
 :root{
+  --app-cursor:url("assets/cursor-mascot.cur") 12 6, url("assets/cursor-mascot.png") 12 6;
   --ink:#1a1f1b;
   --ink2:#3d4a3f;
   --ink3:#6b7c6d;
@@ -39,6 +44,35 @@ body{
   overflow:hidden;
   position:relative;
 }
+*,
+*::before,
+*::after{
+  cursor:var(--app-cursor),auto !important;
+}
+a,
+button,
+select,
+input,
+textarea,
+[role="button"],
+.search-pill,
+.eco-pill,
+.btn-setting,
+.sp-close,
+.btn-run,
+.btn-cancel,
+.btn-ok,
+.date-chip,
+.landing-btn,
+.region-card,
+.access-card,
+.tl-card-btn,
+.crowd-row,
+.t-tab,
+.peek-chip-btn,
+.eco-pin{
+  cursor:var(--app-cursor),pointer !important;
+}
 /* ── MAP ── */
 #map-wrap{position:fixed;inset:0;z-index:0}
 #map{width:100%;height:100%}
@@ -54,6 +88,13 @@ body{
   border-radius:12px!important;
   box-shadow:0 2px 12px rgba(0,0,0,.1)!important;
 }
+.leaflet-popup-content-wrapper{
+  background:transparent!important;
+  box-shadow:none!important;
+  padding:0!important;
+}
+.leaflet-popup-content{margin:0!important}
+.leaflet-popup-tip-container{display:none!important}
 
 /* ── TOP ── */
 .topbar{
@@ -557,6 +598,25 @@ body{
   font-size:17px;
   border:2.5px solid rgba(255,255,255,.9);
   box-shadow:0 3px 14px rgba(0,0,0,.2);
+  cursor:pointer;
+}
+.map-popup{
+  min-width:180px;max-width:220px;
+  padding:12px 14px;border-radius:16px;
+  background:rgba(245,242,236,.96);
+  border:1px solid rgba(255,255,255,.85);
+  box-shadow:0 16px 34px rgba(26,31,27,.18);
+}
+.map-popup-title{
+  font-family:'Noto Serif KR',serif;font-size:14px;font-weight:700;color:var(--ink);
+}
+.map-popup-copy{
+  margin-top:4px;font-size:11px;color:var(--ink3);line-height:1.55;
+}
+.map-popup-tag{
+  display:inline-flex;margin-top:8px;
+  font-size:10px;font-weight:700;color:var(--moss);
+  background:rgba(82,160,106,.14);padding:4px 8px;border-radius:999px;
 }
 </style>
 </head>
@@ -690,7 +750,8 @@ const DEFAULT_BUS_API_KEY='8e57fbd128fc9910c31a1bdab4446063b097b2f59b6f24cdc208a
 const storedApiKey=localStorage.getItem('tapi');
 let API_KEY=storedApiKey===null?DEFAULT_API_KEY:storedApiKey;
 const BUS_API_KEY=DEFAULT_BUS_API_KEY;
-let map,markers=[],lines=[],courseMarkers=[];
+let map,markers=[],lines=[],courseMarkers=[],activeInfoOverlay=null;
+let mapProvider='leaflet';
 let curTab='course',curRegion=null;
 let crowdD=[],courseD=[],lockerD=[];
 let busInfoBySpot={};
@@ -866,57 +927,207 @@ function renderBusInfo(spot){
   </div>`;
 }
 
-function initMap(){
+function initKakaoMap(){
+  mapProvider='kakao';
+  map=new kakao.maps.Map(document.getElementById('map'),{
+    center:new kakao.maps.LatLng(34.87,126.99),
+    level:12,
+  });
+  const zoomControl=new kakao.maps.ZoomControl();
+  map.addControl(zoomControl,kakao.maps.ControlPosition.RIGHT);
+  kakao.maps.event.addListener(map,'click',closeInfoOverlay);
+}
+
+function initLeafletMap(){
+  mapProvider='leaflet';
   map=L.map('map',{zoomControl:false,attributionControl:false}).setView([34.87,126.99],8);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
   L.control.zoom({position:'bottomright'}).addTo(map);
+}
+
+function initMap(){
+  try{
+    const isLocalHost=['localhost','127.0.0.1'].includes(window.location.hostname);
+    if(window.kakao?.maps && !isLocalHost){
+      initKakaoMap();
+    }else{
+      initLeafletMap();
+      if(isLocalHost){
+        setTimeout(()=>toast('로컬에서는 기본 지도로 표시 중입니다. 카카오 맵은 앱의 JavaScript SDK 도메인 등록 후 배포 주소에서 확인해보세요'),200);
+      }
+    }
+  }catch{
+    initLeafletMap();
+    setTimeout(()=>toast('카카오 지도를 불러오지 못해 기본 지도로 표시합니다'),200);
+  }
   plotOverview();
 }
 
 function clearMap(){
-  markers.forEach(m=>map.removeLayer(m));
-  lines.forEach(l=>map.removeLayer(l));
+  closeInfoOverlay();
+  if(mapProvider==='kakao'){
+    markers.forEach(m=>m.setMap(null));
+    lines.forEach(l=>l.setMap(null));
+  }else{
+    markers.forEach(m=>map.removeLayer(m));
+    lines.forEach(l=>map.removeLayer(l));
+  }
   markers=[];lines=[];courseMarkers=[];
+}
+
+function closeInfoOverlay(){
+  if(mapProvider==='kakao'&&activeInfoOverlay){
+    activeInfoOverlay.setMap(null);
+    activeInfoOverlay=null;
+  }
+}
+
+function makeLatLng(lat,lng){
+  return mapProvider==='kakao' ? new kakao.maps.LatLng(lat,lng) : L.latLng(lat,lng);
+}
+
+function makePopupContent(title,copy,tag='지도 정보'){
+  return `<div class="map-popup">
+    <div class="map-popup-title">${title}</div>
+    <div class="map-popup-copy">${copy}</div>
+    <div class="map-popup-tag">${tag}</div>
+  </div>`;
+}
+
+function showInfoOverlay(item,tag){
+  if(mapProvider!=='kakao')return;
+  closeInfoOverlay();
+  activeInfoOverlay=new kakao.maps.CustomOverlay({
+    position:makeLatLng(item.lat,item.lng),
+    content:makePopupContent(item.n,item.d||item.sub||'',tag),
+    yAnchor:1.8,
+  });
+  activeInfoOverlay.setMap(map);
+}
+
+function createPinOverlay(item,onClick){
+  if(mapProvider==='leaflet'){
+    const icon=L.divIcon({
+      html:`<div class="eco-pin" style="background:${item.bg};font-size:17px">${item.e}</div>`,
+      iconSize:[38,38],
+      iconAnchor:[19,19],
+      className:'',
+    });
+    const marker=L.marker([item.lat,item.lng],{icon}).addTo(map);
+    marker.bindPopup(makePopupContent(item.n,item.d||item.sub||'','지도 정보'),{
+      closeButton:false,
+      className:'map-popup-shell',
+    });
+    marker.on('click',onClick);
+    markers.push(marker);
+    return marker;
+  }
+  const pin=document.createElement('button');
+  pin.type='button';
+  pin.className='eco-pin';
+  pin.style.background=item.bg;
+  pin.textContent=item.e;
+  pin.addEventListener('click',e=>{
+    e.stopPropagation();
+    onClick();
+  });
+  const overlay=new kakao.maps.CustomOverlay({
+    position:makeLatLng(item.lat,item.lng),
+    content:pin,
+    yAnchor:1,
+  });
+  overlay.setMap(map);
+  markers.push(overlay);
+  return overlay;
 }
 
 function plotOverview(focusKey=null){
   clearMap();
-  Object.entries(RG).forEach(([key,ri])=>{
-    const ic=L.divIcon({
-      html:`<div class="eco-pin" style="background:${ri.bg};font-size:17px">${ri.e}</div>`,
-      iconSize:[38,38],iconAnchor:[19,19],className:'',
+  if(mapProvider==='leaflet'){
+    const points=[];
+    Object.entries(RG).forEach(([key,ri])=>{
+      const marker=createPinOverlay(ri,()=>previewRegion(key));
+      points.push([ri.lat,ri.lng]);
+      if(key===focusKey)marker.openPopup();
     });
-    const mk=L.marker([ri.lat,ri.lng],{icon:ic}).addTo(map);
-    mk.bindPopup(`<b style="font-family:'Noto Serif KR',serif;font-size:14px">${ri.n}</b><br><small style="color:#666">${ri.sub}</small>`);
-    mk.on('click',()=>previewRegion(key));
-    markers.push(mk);
-    if(key===focusKey)mk.openPopup();
+    if(focusKey&&RG[focusKey]){
+      map.flyTo([RG[focusKey].lat,RG[focusKey].lng],10,{duration:.8});
+    }else if(points.length){
+      map.fitBounds(points,{padding:[40,40]});
+    }
+    return;
+  }
+  const bounds=new kakao.maps.LatLngBounds();
+  Object.entries(RG).forEach(([key,ri])=>{
+    createPinOverlay(ri,()=>{
+      showInfoOverlay(ri,'지역 미리보기');
+      previewRegion(key);
+    });
+    bounds.extend(makeLatLng(ri.lat,ri.lng));
+    if(key===focusKey)showInfoOverlay(ri,'지역 미리보기');
   });
-  if(focusKey&&RG[focusKey])map.flyTo([RG[focusKey].lat,RG[focusKey].lng],10,{duration:.8});
-  else map.flyTo([34.87,126.99],8,{duration:.8});
+  if(focusKey&&RG[focusKey]){
+    map.setLevel(9);
+    map.panTo(makeLatLng(RG[focusKey].lat,RG[focusKey].lng));
+  }else{
+    map.setBounds(bounds);
+  }
 }
 
 function plotCourse(spots){
   clearMap();
-  const lls=[];
-  spots.forEach(s=>{
-    const ll=[s.lat,s.lng];
-    lls.push(ll);
-    const ic=L.divIcon({
-      html:`<div class="eco-pin" style="background:${s.bg};font-size:17px">${s.e}</div>`,
-      iconSize:[38,38],iconAnchor:[19,19],className:'',
+  if(mapProvider==='leaflet'){
+    const path=[];
+    spots.forEach(s=>{
+      const marker=createPinOverlay(s,()=>null);
+      marker.bindPopup(makePopupContent(s.n,s.d||'','코스 포인트'),{
+        closeButton:false,
+        className:'map-popup-shell',
+      });
+      courseMarkers.push({
+        open:()=>marker.openPopup(),
+        position:L.latLng(s.lat,s.lng),
+      });
+      path.push([s.lat,s.lng]);
     });
-    const mk=L.marker(ll,{icon:ic}).addTo(map);
-    mk.bindPopup(`<b style="font-family:'Noto Serif KR',serif;font-size:14px">${s.n}</b><br><small style="color:#666">${s.d}</small>`);
-    markers.push(mk);
-    courseMarkers.push(mk);
+    if(path.length>1){
+      const pl=L.polyline(path,{color:'#52a06a',weight:4,dashArray:'9 7',opacity:.8}).addTo(map);
+      lines.push(pl);
+      map.fitBounds(pl.getBounds(),{padding:[50,50]});
+    }else if(path.length===1){
+      map.flyTo(path[0],13,{duration:.8});
+    }
+    return;
+  }
+  const path=[];
+  const bounds=new kakao.maps.LatLngBounds();
+  spots.forEach(s=>{
+    const position=makeLatLng(s.lat,s.lng);
+    path.push(position);
+    bounds.extend(position);
+    const overlay=createPinOverlay(s,()=>showInfoOverlay(s,'코스 포인트'));
+    courseMarkers.push({
+      overlay,
+      open:()=>{
+        showInfoOverlay(s,'코스 포인트');
+      },
+      position,
+    });
   });
-  if(lls.length>1){
-    const pl=L.polyline(lls,{color:'#52a06a',weight:3,dashArray:'9 7',opacity:.7}).addTo(map);
+  if(path.length>1){
+    const pl=new kakao.maps.Polyline({
+      path,
+      strokeWeight:4,
+      strokeColor:'#52a06a',
+      strokeOpacity:0.8,
+      strokeStyle:'dash',
+    });
+    pl.setMap(map);
     lines.push(pl);
-    map.fitBounds(pl.getBounds(),{paddingTopLeft:[20,130],paddingBottomRight:[24,220]});
-  }else if(lls.length===1){
-    map.flyTo(lls[0],13,{duration:.8});
+    map.setBounds(bounds);
+  }else if(path.length===1){
+    map.setLevel(5);
+    map.panTo(path[0]);
   }
 }
 
@@ -1329,8 +1540,13 @@ function focusSpot(index){
   const marker=courseMarkers[index];
   const spot=courseD[index];
   if(!marker||!spot)return;
-  map.flyTo([spot.lat,spot.lng],13,{duration:.8});
-  marker.openPopup();
+  if(mapProvider==='kakao'){
+    map.setLevel(5);
+    map.panTo(makeLatLng(spot.lat,spot.lng));
+  }else{
+    map.flyTo(marker.position,13,{duration:.8});
+  }
+  marker.open();
   toast(`📍 ${spot.n} 위치를 지도에서 열었어요`);
 }
 
@@ -1403,16 +1619,23 @@ document.addEventListener('touchmove',e=>{
 document.addEventListener('touchend',()=>{drag.on=false});
 
 document.addEventListener('DOMContentLoaded',()=>{
-  initMap();
-  document.getElementById('tdate').value=formatInputDate(new Date());
-  document.getElementById('tdate').addEventListener('change',syncDatePreset);
-  syncDatePreset();
-  updatePeek();
-  renderLandingState();
-  setPillOn(null);
-  if(window.innerWidth>=768){
-    document.getElementById('sheet').className='sheet';
-    document.getElementById('sheet').style.transform='translateY(0)';
+  const boot=()=>{
+    initMap();
+    document.getElementById('tdate').value=formatInputDate(new Date());
+    document.getElementById('tdate').addEventListener('change',syncDatePreset);
+    syncDatePreset();
+    updatePeek();
+    renderLandingState();
+    setPillOn(null);
+    if(window.innerWidth>=768){
+      document.getElementById('sheet').className='sheet';
+      document.getElementById('sheet').style.transform='translateY(0)';
+    }
+  };
+  if(window.kakao?.maps?.load){
+    kakao.maps.load(boot);
+  }else{
+    boot();
   }
 });
 </script>

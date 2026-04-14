@@ -29,3 +29,17 @@ curl -s http://127.0.0.1:8001/health
 ```bash
 ./scripts/run_demo.sh stop
 ```
+
+## Deploy
+
+GitHub Pages 배포용 워크플로가 들어 있습니다.
+
+1. GitHub 저장소 `Settings > Pages` 로 이동합니다.
+2. `Build and deployment` 의 `Source` 를 `GitHub Actions` 로 설정합니다.
+3. `ui` 브랜치에 푸시하면 자동으로 배포됩니다.
+
+배포 주소 예시:
+
+```text
+https://yeninni.github.io/trip-/
+```
