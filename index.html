@@ -1037,6 +1037,10 @@ function formatBusMinutes(seconds){
   return `${mins}분 후`;
 }
 
+function canUseBusProxy(){
+  return ['localhost','127.0.0.1'].includes(window.location.hostname);
+}
+
 async function loadBusStopDataset(){
   if(!busStopDatasetPromise){
     busStopDatasetPromise=fetch(BUS_STOP_DATA_URL,{cache:'force-cache'})
@@ -1091,6 +1095,7 @@ async function fetchNearbyBusStop(lat,lng){
     const localStop=await findNearbyBusStopFromDataset(lat,lng);
     if(localStop)return localStop;
   }catch{}
+  if(!canUseBusProxy())return null;
   if(!BUS_API_KEY)return null;
   const url=`/api/bus/stops`
     +`?serviceKey=${encodeURIComponent(BUS_API_KEY)}&gpsLati=${encodeURIComponent(lat)}&gpsLong=${encodeURIComponent(lng)}&_type=json&numOfRows=10&pageNo=1`;
@@ -1104,6 +1109,7 @@ async function fetchNearbyBusStop(lat,lng){
 }
 
 async function fetchBusArrivals(cityCode,nodeId){
+  if(!canUseBusProxy())return [];
   if(!BUS_API_KEY||!cityCode||!nodeId)return [];
   const url=`/api/bus/arrivals`
     +`?serviceKey=${encodeURIComponent(BUS_API_KEY)}&cityCode=${encodeURIComponent(cityCode)}&nodeId=${encodeURIComponent(nodeId)}&_type=json&numOfRows=10&pageNo=1`;
@@ -1130,13 +1136,23 @@ async function readBusProxyError(response){
 }
 
 async function fetchBusInfoForSpot(spot){
-  if(!BUS_API_KEY){
+  if(canUseBusProxy()&&!BUS_API_KEY){
     return {status:'error',message:'설정에서 공공데이터포털 버스 API 서비스키를 먼저 입력해 주세요.'};
   }
   try{
     const stop=await fetchNearbyBusStop(spot.lat,spot.lng);
     if(!stop){
       return {status:'empty',message:'주변 정류장 정보를 찾지 못했어요.'};
+    }
+    if(!canUseBusProxy()){
+      return {
+        status:'static',
+        stopName:stop.nodenm||'가까운 정류장',
+        stopNo:stop.nodeno||'',
+        cityCode:stop.citycode||'',
+        arrivals:[],
+        message:'GitHub Pages에서는 가까운 정류장 위치만 제공해요. 실시간 도착 정보는 로컬 데모 서버에서 확인할 수 있어요.',
+      };
     }
     const arrivals=await fetchBusArrivals(stop.citycode,stop.nodeid);
     return {
@@ -1188,7 +1204,7 @@ function renderBusInfo(spot){
     return `<div class="tl-bus"><div class="tl-bus-head"><span>🚌 버스 접근</span><span>연결 실패</span></div><div class="tl-bus-note">${info.message}</div></div>`;
   }
   return `<div class="tl-bus">
-    <div class="tl-bus-head"><span>🚌 버스 접근</span><span>${info.arrivals?.length?`실시간 ${info.arrivals.length}건`:'도착 정보 없음'}</span></div>
+    <div class="tl-bus-head"><span>🚌 버스 접근</span><span>${info.status==='static'?'정류장 안내':info.arrivals?.length?`실시간 ${info.arrivals.length}건`:'도착 정보 없음'}</span></div>
     <div class="tl-bus-stop">${info.stopName}${info.stopNo?` · 정류장 ${info.stopNo}`:''}</div>
     ${info.arrivals?.length?`<div class="tl-bus-routes">${info.arrivals.map(route=>`<span class="tl-bus-route"><b>${route.routeNo}</b>${route.minutes}${route.stopsAway?` · ${route.stopsAway}`:''}</span>`).join('')}</div>`:''}
     ${info.message?`<div class="tl-bus-note">${info.message}</div>`:''}
