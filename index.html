@@ -901,6 +901,8 @@ body{
     <div class="modal-t">🔑 API 키 설정</div>
     <p>기본 TourAPI 4.0 서비스키가 적용되어 있어 바로 사용할 수 있습니다. 다른 키를 입력하면 해당 키로 덮어쓸 수 있습니다.<br><br>발급: <a href="https://api.visitkorea.or.kr" target="_blank" style="color:var(--leaf)">api.visitkorea.or.kr</a></p>
     <input type="text" id="keyInput" placeholder="서비스키 (Decoding 키 입력)">
+    <p>버스 도착 정보는 공공데이터포털 버스 API 키를 사용합니다. 실시간 정류장/도착 정보가 필요하면 아래에 버스 서비스키를 입력하세요.<br><br>발급: <a href="https://www.data.go.kr" target="_blank" style="color:var(--leaf)">data.go.kr</a></p>
+    <input type="text" id="busKeyInput" placeholder="버스 API 서비스키 (Decoding 키 입력)">
     <div class="modal-row">
       <button class="btn-cancel" onclick="closeModal()">취소</button>
       <button class="btn-ok" onclick="saveKey()">저장</button>
@@ -912,8 +914,9 @@ body{
 const DEFAULT_API_KEY='8e57fbd128fc9910c31a1bdab4446063b097b2f59b6f24cdc208abb18fde2ece';
 const DEFAULT_BUS_API_KEY='8e57fbd128fc9910c31a1bdab4446063b097b2f59b6f24cdc208abb18fde2ece';
 const storedApiKey=localStorage.getItem('tapi');
+const storedBusApiKey=localStorage.getItem('bus_api_key');
 let API_KEY=storedApiKey===null?DEFAULT_API_KEY:storedApiKey;
-const BUS_API_KEY=DEFAULT_BUS_API_KEY;
+let BUS_API_KEY=storedBusApiKey===null?DEFAULT_BUS_API_KEY:storedBusApiKey;
 let map,markers=[],lines=[],courseMarkers=[],activeInfoOverlay=null;
 let mapProvider='leaflet';
 let curTab='course',curRegion=null;
@@ -921,6 +924,7 @@ let crowdD=[],courseD=[],lockerD=[];
 let busInfoBySpot={};
 let busLoading=false;
 let busLoadToken=0;
+let busStopDatasetPromise=null;
 
 const RG={
   yeosu:   {n:'여수',  e:'🌊',sub:'해안·야경',  theme:'바다', lat:34.7604,lng:127.6622,c:'#0ea5e9',bg:'#e0f2fe'},
@@ -1021,6 +1025,7 @@ const FESTIVALS={
     {season:'가을',date:'2026.05.14 - 05.16',name:'역사 산책 페스티벌',place:'다산초당 · 가우도',copy:'역사 명소와 해안 걷기를 연결해 묵직한 분위기의 여행을 만들기 좋아요.'},
   ],
 };
+const BUS_STOP_DATA_URL='assets/data/jeonnam-bus-stops.json';
 
 function listFromApi(items){
   if(Array.isArray(items))return items;
@@ -1032,20 +1037,81 @@ function formatBusMinutes(seconds){
   return `${mins}분 후`;
 }
 
+async function loadBusStopDataset(){
+  if(!busStopDatasetPromise){
+    busStopDatasetPromise=fetch(BUS_STOP_DATA_URL,{cache:'force-cache'})
+      .then(r=>{
+        if(!r.ok)throw new Error(`bus stop dataset unavailable (${r.status})`);
+        return r.json();
+      })
+      .catch(error=>{
+        busStopDatasetPromise=null;
+        throw error;
+      });
+  }
+  return busStopDatasetPromise;
+}
+
+function measureBusDistance(lat1,lng1,lat2,lng2){
+  const toRad=v=>v*Math.PI/180;
+  const earthRadius=6371000;
+  const dLat=toRad(lat2-lat1);
+  const dLng=toRad(lng2-lng1);
+  const a=Math.sin(dLat/2)**2
+    +Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return earthRadius*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+async function findNearbyBusStopFromDataset(lat,lng){
+  const stops=await loadBusStopDataset();
+  if(!Array.isArray(stops)||!stops.length)return null;
+  let nearest=null;
+  let nearestDistance=Infinity;
+  for(const stop of stops){
+    const dist=measureBusDistance(lat,lng,Number(stop.lat),Number(stop.lng));
+    if(dist<nearestDistance){
+      nearest=stop;
+      nearestDistance=dist;
+    }
+  }
+  if(!nearest)return null;
+  return {
+    nodeid:nearest.nodeId,
+    nodenm:nearest.stopName,
+    nodeno:nearest.stopNo,
+    citycode:nearest.cityCode,
+    cityname:nearest.cityName,
+    distanceMeters:Math.round(nearestDistance),
+    source:'local_dataset',
+  };
+}
+
 async function fetchNearbyBusStop(lat,lng){
+  try{
+    const localStop=await findNearbyBusStopFromDataset(lat,lng);
+    if(localStop)return localStop;
+  }catch{}
   if(!BUS_API_KEY)return null;
-  const url=`https://apis.data.go.kr/1613000/BusSttnInfoInqireService/getCrdntPrxmtSttnList`
+  const url=`/api/bus/stops`
     +`?serviceKey=${encodeURIComponent(BUS_API_KEY)}&gpsLati=${encodeURIComponent(lat)}&gpsLong=${encodeURIComponent(lng)}&_type=json&numOfRows=10&pageNo=1`;
   const r=await fetch(url);
+  if(!r.ok){
+    const detail=await readBusProxyError(r);
+    throw new Error(detail);
+  }
   const d=await r.json();
   return listFromApi(d?.response?.body?.items?.item)[0]||null;
 }
 
 async function fetchBusArrivals(cityCode,nodeId){
   if(!BUS_API_KEY||!cityCode||!nodeId)return [];
-  const url=`https://apis.data.go.kr/1613000/ArvlInfoInqireService/getSttnAcctoArvlPrearngeInfoList`
+  const url=`/api/bus/arrivals`
     +`?serviceKey=${encodeURIComponent(BUS_API_KEY)}&cityCode=${encodeURIComponent(cityCode)}&nodeId=${encodeURIComponent(nodeId)}&_type=json&numOfRows=10&pageNo=1`;
   const r=await fetch(url);
+  if(!r.ok){
+    const detail=await readBusProxyError(r);
+    throw new Error(detail);
+  }
   const d=await r.json();
   const items=listFromApi(d?.response?.body?.items?.item);
   return items
@@ -1054,7 +1120,19 @@ async function fetchBusArrivals(cityCode,nodeId){
     .slice(0,3);
 }
 
+async function readBusProxyError(response){
+  try{
+    const payload=await response.json();
+    if(payload?.status===403)return '버스 API 서비스키가 없거나, 해당 키에 버스 API 사용 권한이 없습니다.';
+    if(payload?.detail)return payload.detail;
+  }catch{}
+  return `버스 API 호출에 실패했습니다. (${response.status})`;
+}
+
 async function fetchBusInfoForSpot(spot){
+  if(!BUS_API_KEY){
+    return {status:'error',message:'설정에서 공공데이터포털 버스 API 서비스키를 먼저 입력해 주세요.'};
+  }
   try{
     const stop=await fetchNearbyBusStop(spot.lat,spot.lng);
     if(!stop){
@@ -1074,8 +1152,8 @@ async function fetchBusInfoForSpot(spot){
       })),
       message:arrivals.length?'':`정류장은 찾았지만 실시간 도착 정보가 없어요.`,
     };
-  }catch{
-    return {status:'error',message:'버스 정보를 불러오지 못했어요.'};
+  }catch(error){
+    return {status:'error',message:error?.message||'버스 정보를 불러오지 못했어요.'};
   }
 }
 
@@ -1905,6 +1983,7 @@ function toast(msg){
 function openModal(){
   document.getElementById('apiModal').classList.add('open');
   document.getElementById('keyInput').value=API_KEY;
+  document.getElementById('busKeyInput').value=BUS_API_KEY;
 }
 
 function closeModal(){
@@ -1917,11 +1996,15 @@ document.getElementById('apiModal').addEventListener('click',e=>{
 
 function saveKey(){
   const k=document.getElementById('keyInput').value.trim();
+  const busKey=document.getElementById('busKeyInput').value.trim();
   API_KEY=k||DEFAULT_API_KEY;
+  BUS_API_KEY=busKey||DEFAULT_BUS_API_KEY;
   if(k)localStorage.setItem('tapi',k);
   else localStorage.removeItem('tapi');
+  if(busKey)localStorage.setItem('bus_api_key',busKey);
+  else localStorage.removeItem('bus_api_key');
   closeModal();
-  toast(k?'✅ API 키 저장됨':'🔧 기본 API 키로 복원됨');
+  toast('✅ Tour API / 버스 API 설정이 저장됐습니다');
 }
 
 let drag={on:false,y0:0};
