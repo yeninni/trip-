@@ -1186,7 +1186,7 @@ function renderBusInfo(spot){
     return `<div class="tl-bus"><div class="tl-bus-head"><span>🚌 버스 접근</span><span>연결 실패</span></div><div class="tl-bus-note">${info.message}</div></div>`;
   }
   return `<div class="tl-bus">
-    <div class="tl-bus-head"><span>🚌 버스 접근</span><span>${info.arrivals?.length?`실시간 ${info.arrivals.length}건`:'도착 정보 없음'}</span></div>
+    <div class="tl-bus-head"><span>🚌 버스 접근</span><span>${info.status==='static'?'정류장 안내':info.arrivals?.length?`실시간 ${info.arrivals.length}건`:'도착 정보 없음'}</span></div>
     <div class="tl-bus-stop">${info.stopName}${info.stopNo?` · 정류장 ${info.stopNo}`:''}</div>
     ${info.arrivals?.length?`<div class="tl-bus-routes">${info.arrivals.map(route=>`<span class="tl-bus-route"><b>${route.routeNo}</b>${route.minutes}${route.stopsAway?` · ${route.stopsAway}`:''}</span>`).join('')}</div>`:''}
     ${info.message?`<div class="tl-bus-note">${info.message}</div>`:''}
