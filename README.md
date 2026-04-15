@@ -43,3 +43,7 @@ GitHub Pages 배포용 워크플로가 들어 있습니다.
 ```text
 https://yeninni.github.io/trip-/
 ```
+
+## Git workflow
+
+브랜치/커밋/푸시 운영 기준 문서는 `docs/GIT_WORKFLOW.md`를 참고하세요.
