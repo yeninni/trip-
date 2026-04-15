@@ -1062,6 +1062,18 @@ const FESTIVALS={
     {season:'가을',date:'2026.05.14 - 05.16',name:'역사 산책 페스티벌',place:'다산초당 · 가우도',copy:'역사 명소와 해안 걷기를 연결해 묵직한 분위기의 여행을 만들기 좋아요.'},
   ],
 };
+const FEATURED_TRAILS={
+  yeosu:{
+    name:'여수 대표 해안길',
+    points:[
+      {lat:34.7482,lng:127.7658},
+      {lat:34.7470,lng:127.7528},
+      {lat:34.7449,lng:127.7467},
+      {lat:34.7407,lng:127.7447},
+      {lat:34.7365,lng:127.7415},
+    ],
+  },
+};
 function listFromApi(items){
   if(Array.isArray(items))return items;
   return items?[items]:[];
@@ -1387,6 +1399,33 @@ function createPinOverlay(item,onClick){
   return overlay;
 }
 
+function drawFeaturedTrail(key){
+  const trail=FEATURED_TRAILS[key];
+  if(!trail?.points?.length)return;
+  if(mapProvider==='leaflet'){
+    const path=trail.points.map(point=>[point.lat,point.lng]);
+    const line=L.polyline(path,{
+      color:'#0ea5e9',
+      weight:5,
+      opacity:.78,
+      dashArray:'10 7',
+    }).addTo(map);
+    line.bindPopup(makePopupContent(trail.name,'여수 해안 중심 코스를 지도에 강조했어요.','추천 해안길'));
+    lines.push(line);
+    return;
+  }
+  const path=trail.points.map(point=>makeLatLng(point.lat,point.lng));
+  const line=new kakao.maps.Polyline({
+    path,
+    strokeWeight:5,
+    strokeColor:'#0ea5e9',
+    strokeOpacity:0.82,
+    strokeStyle:'dash',
+  });
+  line.setMap(map);
+  lines.push(line);
+}
+
 function plotOverview(focusKey=null){
   clearMap();
   if(mapProvider==='leaflet'){
@@ -1401,6 +1440,7 @@ function plotOverview(focusKey=null){
     }else if(points.length){
       map.fitBounds(points,{padding:[40,40]});
     }
+    drawFeaturedTrail(focusKey);
     map.setMaxBounds(JEONNAM_LEAFLET_BOUNDS);
     return;
   }
@@ -1419,6 +1459,7 @@ function plotOverview(focusKey=null){
   }else{
     map.setBounds(bounds);
   }
+  drawFeaturedTrail(focusKey);
   restrictKakaoMapBounds();
 }
 
@@ -1580,7 +1621,9 @@ function updateMapFrame(key=curRegion){
   const festivals=FESTIVALS[key]||[];
   const lockers=getLockerSummary(key);
   title.textContent=`${region.n} 지도 프리뷰`;
-  sub.textContent=`${region.sub} 흐름을 먼저 보고, 아래에서 대표 축제 ${festivals.length}건과 보관함 ${lockers.locations}곳을 이어서 확인해보세요.`;
+  sub.textContent=key==='yeosu'
+    ? `해안·야경 흐름을 먼저 보고, 지도에는 대표 해안길을 표시해두었습니다. 이어서 축제 ${festivals.length}건과 보관함 ${lockers.locations}곳을 확인해보세요.`
+    : `${region.sub} 흐름을 먼저 보고, 아래에서 대표 축제 ${festivals.length}건과 보관함 ${lockers.locations}곳을 이어서 확인해보세요.`;
   badge.textContent=`${lockers.avail}/${lockers.total||0}`;
   badgeLabel.textContent='보관함 여유';
 }
