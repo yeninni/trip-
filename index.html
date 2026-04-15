@@ -921,6 +921,8 @@ body{
     <div class="modal-t">🔑 API 키 설정</div>
     <p>기본 TourAPI 4.0 서비스키가 적용되어 있어 바로 사용할 수 있습니다. 다른 키를 입력하면 해당 키로 덮어쓸 수 있습니다.<br><br>발급: <a href="https://api.visitkorea.or.kr" target="_blank" style="color:var(--leaf)">api.visitkorea.or.kr</a></p>
     <input type="text" id="keyInput" placeholder="서비스키 (Decoding 키 입력)">
+    <p>버스 도착 정보는 공공데이터포털 버스 API 키를 사용합니다. 실시간 정류장/도착 정보가 필요하면 아래에 버스 서비스키를 입력하세요.<br><br>발급: <a href="https://www.data.go.kr" target="_blank" style="color:var(--leaf)">data.go.kr</a></p>
+    <input type="text" id="busKeyInput" placeholder="버스 API 서비스키 (Decoding 키 입력)">
     <div class="modal-row">
       <button class="btn-cancel" onclick="closeModal()">취소</button>
       <button class="btn-ok" onclick="saveKey()">저장</button>
@@ -932,8 +934,9 @@ body{
 const DEFAULT_API_KEY='8e57fbd128fc9910c31a1bdab4446063b097b2f59b6f24cdc208abb18fde2ece';
 const DEFAULT_BUS_API_KEY='c8d7a4c439a6ab3c5c9028a2e513913701fa8caa7c07cfa2e024187e3e8b7d42';
 const storedApiKey=localStorage.getItem('tapi');
+const storedBusApiKey=localStorage.getItem('bus_api_key');
 let API_KEY=storedApiKey===null?DEFAULT_API_KEY:storedApiKey;
-const BUS_API_KEY=DEFAULT_BUS_API_KEY;
+let BUS_API_KEY=storedBusApiKey===null?DEFAULT_BUS_API_KEY:storedBusApiKey;
 let map,markers=[],lines=[],courseMarkers=[],activeInfoOverlay=null;
 let mapProvider='leaflet';
 let curTab='course',curRegion=null;
@@ -1066,7 +1069,6 @@ const FESTIVALS={
     {season:'가을',date:'2026.05.14 - 05.16',name:'역사 산책 페스티벌',place:'다산초당 · 가우도',copy:'역사 명소와 해안 걷기를 연결해 묵직한 분위기의 여행을 만들기 좋아요.'},
   ],
 };
-
 function listFromApi(items){
   if(Array.isArray(items))return items;
   return items?[items]:[];
@@ -1112,6 +1114,9 @@ async function fetchPrecisionBusVehicles(stdgCd){
 }
 
 async function fetchBusInfoForSpot(spot){
+  if(!BUS_API_KEY){
+    return {status:'error',message:'설정에서 공공데이터포털 버스 API 서비스키를 먼저 입력해 주세요.'};
+  }
   try{
     const stdgCd=BUS_STD_CODE_BY_REGION[curRegion];
     if(!stdgCd){
@@ -2010,6 +2015,7 @@ function toast(msg){
 function openModal(){
   document.getElementById('apiModal').classList.add('open');
   document.getElementById('keyInput').value=API_KEY;
+  document.getElementById('busKeyInput').value=BUS_API_KEY;
 }
 
 function closeModal(){
@@ -2022,11 +2028,15 @@ document.getElementById('apiModal').addEventListener('click',e=>{
 
 function saveKey(){
   const k=document.getElementById('keyInput').value.trim();
+  const busKey=document.getElementById('busKeyInput').value.trim();
   API_KEY=k||DEFAULT_API_KEY;
+  BUS_API_KEY=busKey||DEFAULT_BUS_API_KEY;
   if(k)localStorage.setItem('tapi',k);
   else localStorage.removeItem('tapi');
+  if(busKey)localStorage.setItem('bus_api_key',busKey);
+  else localStorage.removeItem('bus_api_key');
   closeModal();
-  toast(k?'✅ API 키 저장됨':'🔧 기본 API 키로 복원됨');
+  toast('✅ Tour API / 버스 API 설정이 저장됐습니다');
 }
 
 let drag={on:false,y0:0};
