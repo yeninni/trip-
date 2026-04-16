@@ -13,7 +13,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --frame-gap:16px;
-  --layout-max:1280px;
+  --layout-max:1440px;
   --header-offset:122px;
   --content-gap:18px;
   --ink:#17301f;
@@ -54,10 +54,13 @@ body{
   background:linear-gradient(180deg,rgba(244,251,241,.98) 0%,rgba(244,251,241,.95) 78%,rgba(244,251,241,.72) 100%);
   backdrop-filter:blur(16px) saturate(1.15);
   border-bottom:1px solid rgba(255,255,255,.65);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
 }
 .app-shell{
   width:min(var(--layout-max),calc(100vw - var(--frame-gap)*2));
-  margin:calc(var(--header-offset) + var(--content-gap)) 0 42px var(--frame-gap);
+  margin:calc(var(--header-offset) + var(--content-gap)) auto 42px;
   display:grid;
   grid-template-columns:minmax(360px,.92fr) minmax(340px,.8fr) minmax(320px,.76fr);
   gap:22px;
@@ -127,6 +130,7 @@ body{
 /* ── TOP ── */
 .topbar{
   position:relative;
+  width:min(var(--layout-max),calc(100vw - var(--frame-gap)*2));
   padding:0;
   display:flex;align-items:center;gap:10px;
 }
@@ -183,6 +187,7 @@ body{
 /* ── PILLS ── */
 .pill-row{
   position:relative;
+  width:min(var(--layout-max),calc(100vw - var(--frame-gap)*2));
   padding:10px 0 0;
   display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;
 }
