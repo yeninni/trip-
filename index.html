@@ -414,6 +414,7 @@ body{
 .locker-list{padding:20px;display:flex;flex-direction:column;gap:10px}
 .locker-card{
   display:flex;align-items:flex-start;gap:14px;
+  width:100%;text-align:left;cursor:pointer;
   padding:18px;border-radius:24px;background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(231,243,226,.78));
   border:1px solid rgba(125,201,111,.22);
   box-shadow:0 12px 24px rgba(47,105,64,.09);
@@ -633,95 +634,65 @@ body{
   margin-top:10px;font-size:10px;color:var(--ink4);line-height:1.55;
 }
 .locker-feature{
-  background:linear-gradient(180deg,rgba(238,248,234,.98),rgba(247,255,242,.98));
-  border:1px solid rgba(198,223,189,.9);
-  box-shadow:0 16px 32px rgba(47,105,64,.1);
+  background:linear-gradient(165deg,rgba(125,201,111,.22),rgba(247,255,242,.98));
+  border:1px solid rgba(125,201,111,.32);
+  box-shadow:0 18px 34px rgba(47,105,64,.14);
 }
-.locker-board-head{
-  display:flex;align-items:flex-start;gap:12px;
-  padding:10px 4px 14px;
-  border-bottom:1px solid rgba(198,223,189,.9);
+.locker-hero{
+  display:grid;grid-template-columns:1.2fr .8fr;gap:10px;
+  margin-bottom:14px;
 }
-.locker-board-icon{
-  width:52px;height:52px;border-radius:16px;
-  display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(145deg,rgba(223,243,210,.95),rgba(247,255,242,.98));
-  border:1px solid rgba(198,223,189,.9);
-  font-size:24px;flex-shrink:0;
+.locker-hero-copy{
+  padding:16px;border-radius:20px;
+  background:rgba(255,255,255,.72);
+  border:1px solid rgba(255,255,255,.86);
 }
-.locker-board-copy{flex:1;min-width:0}
-.locker-board-title{
-  font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--ink);
-}
-.locker-board-meta{
-  margin-top:4px;font-size:12px;color:var(--ink3);line-height:1.5;
-}
-.locker-board-chips{
-  display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;
-}
-.locker-board-chip{
+.locker-hero-kicker{
   display:inline-flex;align-items:center;gap:6px;
-  padding:7px 10px;border-radius:999px;
-  background:rgba(223,243,210,.94);color:var(--moss);
-  font-size:11px;font-weight:700;
+  padding:6px 10px;border-radius:999px;
+  background:rgba(125,201,111,.18);color:var(--moss);
+  font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
 }
-.locker-board-tabs{
-  display:flex;gap:20px;
-  padding:10px 4px 0;
-  margin-bottom:12px;
-  border-bottom:1px solid rgba(198,223,189,.82);
+.locker-hero-title{
+  margin-top:10px;font-family:var(--font-display);font-size:20px;font-weight:700;line-height:1.35;color:var(--ink);
 }
-.locker-board-tab{
-  position:relative;
-  padding:0 0 12px;
-  font-size:12px;font-weight:700;color:var(--ink4);
+.locker-hero-text{
+  margin-top:8px;font-size:12px;color:var(--ink3);line-height:1.6;
 }
-.locker-board-tab.active{color:var(--moss)}
-.locker-board-tab.active::after{
-  content:'';
-  position:absolute;left:0;right:0;bottom:-1px;height:3px;
-  border-radius:999px;background:var(--leaf);
+.locker-hero-stats{
+  display:grid;grid-template-columns:1fr;gap:10px;
+}
+.locker-stat{
+  padding:16px 14px;border-radius:20px;
+  background:rgba(255,255,255,.82);
+  border:1px solid rgba(255,255,255,.88);
+}
+.locker-stat-label{
+  font-size:10px;font-weight:800;color:var(--ink4);letter-spacing:.05em;text-transform:uppercase;
+}
+.locker-stat-value{
+  margin-top:8px;font-family:var(--font-display);font-size:28px;font-weight:700;color:var(--moss);
+}
+.locker-stat-copy{
+  margin-top:4px;font-size:11px;color:var(--ink3);line-height:1.5;
 }
 .locker-feature-list{
   display:flex;flex-direction:column;gap:10px;
 }
 .locker-feature-card{
-  display:flex;gap:14px;
-  padding:16px;border-radius:22px;
-  background:rgba(255,255,255,.82);
-  border:1px solid rgba(214,231,208,.95);
-  box-shadow:0 10px 24px rgba(47,105,64,.07);
+  width:100%;text-align:left;cursor:pointer;
+  padding:14px 14px 13px;border-radius:18px;
+  background:rgba(255,255,255,.8);
+  border:1px solid rgba(255,255,255,.92);
 }
-.locker-feature-icon{
-  width:54px;height:54px;border-radius:18px;
-  display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(145deg,rgba(223,243,210,.95),rgba(247,255,242,.98));
-  border:1px solid rgba(205,227,196,.95);
-  font-size:24px;flex-shrink:0;
-}
-.locker-feature-body{flex:1;min-width:0}
 .locker-feature-head{
   display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
 }
 .locker-preview-name{font-size:13px;font-weight:800;color:var(--ink)}
-.locker-preview-sub{
-  display:flex;align-items:center;gap:6px;
-  margin-top:5px;font-size:11px;color:var(--ink4);line-height:1.45;
-}
-.locker-preview-sub::before{
-  content:'📍';
-  font-size:11px;line-height:1;
-}
-.locker-preview-cap{
-  display:flex;align-items:center;gap:6px;
-  margin-top:10px;font-weight:700;color:var(--leaf);font-size:12px;
-}
-.locker-preview-cap::before{
-  content:'●';
-  font-size:10px;color:var(--leaf2);
-}
+.locker-preview-sub{display:block;margin-top:4px;font-size:11px;color:var(--ink4);line-height:1.45}
+.locker-preview-cap{display:block;margin-top:10px;font-weight:700;color:var(--ink2);font-size:11px}
 .locker-preview-meter{
-  margin-top:10px;height:8px;border-radius:999px;
+  margin-top:10px;height:7px;border-radius:999px;
   background:rgba(213,232,207,.9);overflow:hidden;
 }
 .locker-preview-fill{height:100%;border-radius:999px}
@@ -814,8 +785,7 @@ body{
     position:relative;top:auto;
   }
   .info-split{grid-template-columns:1fr}
-  .locker-board-head{padding-top:6px}
-  .locker-feature-card{padding:14px}
+  .locker-hero{grid-template-columns:1fr}
 }
 
 @media(max-width:560px){
@@ -1109,12 +1079,28 @@ const COURSES={
   ],
 };
 const LOCKERS={
-  yeosu:   [{n:'여수엑스포역 보관함',addr:'여수시 박람회길 1',avail:12,total:20},{n:'오동도 관광안내소',addr:'여수시 오동도로 222',avail:5,total:10}],
-  suncheon:[{n:'순천역 대형 보관함',addr:'순천시 역전광장길 36',avail:18,total:24},{n:'순천만 입구 보관함',addr:'순천시 순천만길 513',avail:3,total:8}],
-  damyang: [{n:'담양버스터미널 보관함',addr:'담양군 담양읍 객사3길 8',avail:6,total:12},{n:'죽녹원 매표소 보관함',addr:'담양군 죽녹원로 119',avail:9,total:12}],
-  mokpo:   [{n:'목포역 코인 보관함',addr:'목포시 호남로 93',avail:14,total:20},{n:'평화광장 보관소',addr:'목포시 평화로 138',avail:0,total:6}],
-  boseong: [{n:'보성버스터미널',addr:'보성군 보성읍 보성로 93',avail:4,total:8}],
-  gangjin: [{n:'강진버스터미널 보관함',addr:'강진군 탐진로 36',avail:7,total:10}],
+  yeosu:   [
+    {n:'여수엑스포역 보관함',addr:'여수시 박람회길 1',avail:12,total:20,lat:34.7607,lng:127.6598},
+    {n:'오동도 관광안내소',addr:'여수시 오동도로 222',avail:5,total:10,lat:34.7468,lng:127.7446},
+  ],
+  suncheon:[
+    {n:'순천역 대형 보관함',addr:'순천시 역전광장길 36',avail:18,total:24,lat:34.9436,lng:127.4914},
+    {n:'순천만 입구 보관함',addr:'순천시 순천만길 513',avail:3,total:8,lat:34.8988,lng:127.5008},
+  ],
+  damyang: [
+    {n:'담양버스터미널 보관함',addr:'담양군 담양읍 객사3길 8',avail:6,total:12,lat:35.3226,lng:126.9891},
+    {n:'죽녹원 매표소 보관함',addr:'담양군 죽녹원로 119',avail:9,total:12,lat:35.3206,lng:126.9854},
+  ],
+  mokpo:   [
+    {n:'목포역 코인 보관함',addr:'목포시 호남로 93',avail:14,total:20,lat:34.8116,lng:126.3930},
+    {n:'평화광장 보관소',addr:'목포시 평화로 138',avail:0,total:6,lat:34.7920,lng:126.4346},
+  ],
+  boseong: [
+    {n:'보성버스터미널',addr:'보성군 보성읍 보성로 93',avail:4,total:8,lat:34.7715,lng:127.0800},
+  ],
+  gangjin: [
+    {n:'강진버스터미널 보관함',addr:'강진군 탐진로 36',avail:7,total:10,lat:34.6420,lng:126.7680},
+  ],
 };
 const FESTIVALS={
   yeosu:[
@@ -1526,54 +1512,56 @@ function renderFestivalSection(key,limit=2){
   </div>`;
 }
 
-function renderLockerPreviewSection(key,items){
+function renderLockerPreviewSection(items){
   if(!items.length){
     return `<div class="empty" style="padding-top:18px"><div class="empty-s">코스를 찾으면 지역 보관함 여유 현황을 보여드려요.</div></div>`;
   }
-  const region=RG[key]||RG[getBestRegionKey()];
-  const crowd=getCrowdEntry(key);
   const totalSlots=items.reduce((sum,item)=>sum+item.total,0);
   const freeSlots=items.reduce((sum,item)=>sum+item.avail,0);
   const crowdedCount=items.filter(item=>item.avail===0).length;
   return `<div class="info-panel locker-feature">
-    <div class="locker-board-head">
-      <div class="locker-board-icon">${region.e}</div>
-      <div class="locker-board-copy">
-        <div class="locker-board-title">${region.n} 추천 코스</div>
-        <div class="locker-board-meta">혼잡도 ${lvLbl(crowd.level)} · ${items.length}개 보관함 · ${region.sub}</div>
-        <div class="locker-board-chips">
-          <span class="locker-board-chip">${lvLbl(crowd.level)} · ${(crowd.visitors||0).toLocaleString()}명</span>
-          <span class="locker-board-chip">보관함 ${items.length}곳 · 여유 ${freeSlots}칸</span>
+    <div class="info-panel-head">
+      <div class="info-panel-title">짐보관 메인 보드</div>
+      <div class="info-panel-note">이동 전에 여유 칸과 혼잡도를 먼저 보고 출발해요</div>
+    </div>
+    <div class="locker-hero">
+      <div class="locker-hero-copy">
+        <div class="locker-hero-kicker">Core Feature · Locker</div>
+        <div class="locker-hero-title">짐부터 가볍게 맡기고 코스를 움직일 수 있게</div>
+        <div class="locker-hero-text">역, 터미널, 관광안내소 기준으로 보관 거점을 먼저 보여주고 여유 칸까지 한 번에 확인할 수 있게 구성했어요.</div>
+      </div>
+      <div class="locker-hero-stats">
+        <div class="locker-stat">
+          <div class="locker-stat-label">현재 여유 칸</div>
+          <div class="locker-stat-value">${freeSlots}</div>
+          <div class="locker-stat-copy">총 ${totalSlots}칸 중 바로 이용 가능한 공간</div>
+        </div>
+        <div class="locker-stat">
+          <div class="locker-stat-label">혼잡 지점</div>
+          <div class="locker-stat-value">${crowdedCount}</div>
+          <div class="locker-stat-copy">미리 피해서 동선을 짜야 하는 만석 지점</div>
         </div>
       </div>
     </div>
-    <div class="locker-board-tabs">
-      <span class="locker-board-tab">코스</span>
-      <span class="locker-board-tab">혼잡도</span>
-      <span class="locker-board-tab active">보관함</span>
-    </div>
-    <div class="locker-feature-list">${items.map(item=>{
+    <div class="locker-feature-list">${items.map((item,index)=>{
       const ratio=item.total?item.avail/item.total:0;
       const pct=item.total?Math.round(ratio*100):0;
       const state=item.avail===0?'full':ratio<0.35?'warn':'ok';
-      const label=state==='full'?'만석':state==='warn'?'여유 적음':'여유';
+      const label=state==='full'?'만석':state==='warn'?'혼잡':'여유';
       const fillColor=state==='full'?'#ef4444':state==='warn'?'#d97706':'var(--leaf)';
-      return `<div class="locker-feature-card">
-        <div class="locker-feature-icon">🧳</div>
-        <div class="locker-feature-body">
-          <div class="locker-feature-head">
-            <div>
+      return `<button class="locker-feature-card" type="button" onclick="focusLocker(${index},'${curRegion||getBestRegionKey()}')">
+        <div class="locker-feature-head">
+          <div>
             <span class="locker-preview-name">${item.n}</span>
             <span class="locker-preview-sub">${item.addr}</span>
-            </div>
-            <span class="locker-preview-state ${state}">${label}</span>
+            <span class="locker-preview-cap">${item.avail}/${item.total}칸 이용 가능</span>
           </div>
-          <span class="locker-preview-cap">여유 ${item.avail}/${item.total}칸 (${pct}% 남음)</span>
-          <div class="locker-preview-meter"><div class="locker-preview-fill" style="width:${pct}%;background:${fillColor}"></div></div>
+          <span class="locker-preview-state ${state}">${label}</span>
         </div>
-      </div>`;
+        <div class="locker-preview-meter"><div class="locker-preview-fill" style="width:${pct}%;background:${fillColor}"></div></div>
+      </button>`;
     }).join('')}</div>
-    <div class="locker-preview-hint">총 ${totalSlots}칸 중 ${freeSlots}칸 이용 가능 · 만석 ${crowdedCount}곳</div>
+    <div class="locker-preview-hint">실제 연동 단계에서는 지역별 실시간 보관함 여유 데이터로 교체됩니다.</div>
   </div>`;
 }
 
@@ -1583,7 +1571,7 @@ function renderSideRail(key,items){
   const activeKey=key&&RG[key]?key:getBestRegionKey();
   const sourceItems=(items&&items.length)?items:(LOCKERS[activeKey]||[]);
   target.innerHTML=`
-    ${renderLockerPreviewSection(activeKey,sourceItems)}
+    ${renderLockerPreviewSection(sourceItems)}
     ${renderFestivalSection(activeKey,3)}
   `;
 }
@@ -1852,9 +1840,9 @@ function renderCrowd(){
 
 function renderLocker(){
   if(!lockerD.length)return`<div class="empty"><div class="empty-ico">🧳</div><div class="empty-t">보관함 정보 없음</div></div>`;
-  return `<div class="locker-list">${lockerD.map(l=>{
+  return `<div class="locker-list">${lockerD.map((l,index)=>{
     const pct=l.total?Math.round(l.avail/l.total*100):0;
-    return `<div class="locker-card">
+    return `<button class="locker-card" type="button" onclick="focusLocker(${index})">
       <div class="locker-ico">🧳</div>
       <div style="flex:1">
         <div class="lk-name">${l.n}</div>
@@ -1865,7 +1853,7 @@ function renderLocker(){
         </div>
         <div class="lk-prog"><div class="lk-prog-fill" style="width:${pct}%;background:${l.avail>0?'var(--leaf)':'#ef4444'}"></div></div>
       </div>
-    </div>`;
+    </button>`;
   }).join('')}</div>`;
 }
 
@@ -1951,6 +1939,29 @@ function focusSpot(index){
   }
   marker.open();
   toast(`📍 ${spot.n} 위치를 지도에서 열었어요`);
+}
+
+function focusLocker(index,key=curRegion){
+  const regionKey=key&&LOCKERS[key]?key:curRegion;
+  const locker=(LOCKERS[regionKey]||[])[index];
+  if(!locker||locker.lat==null||locker.lng==null)return;
+  const copy=`${locker.addr} · 여유 ${locker.avail}/${locker.total}칸`;
+  if(mapProvider==='kakao'){
+    map.setLevel(4);
+    map.panTo(makeLatLng(locker.lat,locker.lng));
+    showInfoOverlay({n:locker.n,d:copy,lat:locker.lat,lng:locker.lng},'보관함 위치');
+  }else{
+    map.flyTo([locker.lat,locker.lng],14,{duration:.8});
+    L.popup({
+      closeButton:false,
+      className:'map-popup-shell',
+      offset:[0,-18],
+    })
+      .setLatLng([locker.lat,locker.lng])
+      .setContent(makePopupContent(locker.n,copy,'보관함 위치'))
+      .openOn(map);
+  }
+  toast(`📍 ${locker.n} 위치를 지도에서 열었어요`);
 }
 
 async function jumpR(key){
