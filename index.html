@@ -420,29 +420,6 @@ body{
 .lk-txt{font-size:13px;font-weight:700}
 .lk-prog{margin-top:10px;height:8px;border-radius:999px;background:var(--paper3);overflow:hidden}
 .lk-prog-fill{height:100%;border-radius:999px;transition:width .5s ease}
-.tl-bus{
-  margin-top:12px;padding:12px 13px;border-radius:16px;
-  background:rgba(223,243,210,.58);
-  border:1px solid rgba(125,201,111,.2);
-}
-.tl-bus-head{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-  font-size:11px;font-weight:800;color:var(--moss);
-}
-.tl-bus-stop{
-  margin-top:7px;font-size:12px;font-weight:700;color:var(--ink);
-}
-.tl-bus-routes{
-  display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;
-}
-.tl-bus-route{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:6px 10px;border-radius:999px;background:#fff;
-  font-size:11px;color:var(--ink2);border:1px solid rgba(125,201,111,.18);
-}
-.tl-bus-note{
-  margin-top:8px;font-size:11px;line-height:1.5;color:var(--ink3);
-}
 
 /* ── SEARCH PANEL ── */
 .sp-panel{
@@ -980,8 +957,6 @@ body{
     <div class="modal-t">🔑 API 키 설정</div>
     <p>기본 TourAPI 4.0 서비스키가 적용되어 있어 바로 사용할 수 있습니다. 다른 키를 입력하면 해당 키로 덮어쓸 수 있습니다.<br><br>발급: <a href="https://api.visitkorea.or.kr" target="_blank" style="color:var(--leaf)">api.visitkorea.or.kr</a></p>
     <input type="text" id="keyInput" placeholder="서비스키 (Decoding 키 입력)">
-    <p>버스 도착 정보는 공공데이터포털 버스 API 키를 사용합니다. 실시간 정류장/도착 정보가 필요하면 아래에 버스 서비스키를 입력하세요.<br><br>발급: <a href="https://www.data.go.kr" target="_blank" style="color:var(--leaf)">data.go.kr</a></p>
-    <input type="text" id="busKeyInput" placeholder="버스 API 서비스키 (Decoding 키 입력)">
     <div class="modal-row">
       <button class="btn-cancel" onclick="closeModal()">취소</button>
       <button class="btn-ok" onclick="saveKey()">저장</button>
@@ -991,21 +966,13 @@ body{
 
 <script>
 const DEFAULT_API_KEY='8e57fbd128fc9910c31a1bdab4446063b097b2f59b6f24cdc208abb18fde2ece';
-const DEFAULT_BUS_API_KEY='';
-const BUS_STOP_DATA_URL='assets/data/jeonnam-bus-stops.json';
 const storedApiKey=localStorage.getItem('tapi');
-const storedBusApiKey=localStorage.getItem('bus_api_key');
 let API_KEY=storedApiKey===null?DEFAULT_API_KEY:storedApiKey;
-let BUS_API_KEY=storedBusApiKey===null?DEFAULT_BUS_API_KEY:storedBusApiKey;
 let map,markers=[],lines=[],courseMarkers=[],activeInfoOverlay=null;
 let mapProvider='leaflet';
 let curTab='course',curRegion=null;
 let crowdD=[],courseD=[],lockerD=[];
 let kakaoBoundsGuard=false;
-let busStopDatasetPromise=null;
-let busInfoBySpot={};
-let busLoading=false;
-let busLoadToken=0;
 
 const JEONNAM_BOUNDS={
   south:34.0,
@@ -1121,185 +1088,11 @@ const FESTIVALS={
     {season:'가을',date:'2026.05.14 - 05.16',name:'역사 산책 페스티벌',place:'다산초당 · 가우도',copy:'역사 명소와 해안 걷기를 연결해 묵직한 분위기의 여행을 만들기 좋아요.'},
   ],
 };
-const FEATURED_TRAILS={
-  yeosu:{
-    name:'여수 대표 해안길',
-    points:[
-      {lat:34.7482,lng:127.7658},
-      {lat:34.7470,lng:127.7528},
-      {lat:34.7449,lng:127.7467},
-      {lat:34.7407,lng:127.7447},
-      {lat:34.7365,lng:127.7415},
-    ],
-  },
-};
 function listFromApi(items){
   if(Array.isArray(items))return items;
   return items?[items]:[];
 }
 
-function formatBusMinutes(seconds){
-  const mins=Math.max(1,Math.round(Number(seconds||0)/60));
-  return `${mins}분 후`;
-}
-
-async function loadBusStopDataset(){
-  if(!busStopDatasetPromise){
-    busStopDatasetPromise=fetch(BUS_STOP_DATA_URL,{cache:'force-cache'})
-      .then(r=>{
-        if(!r.ok)throw new Error(`bus stop dataset unavailable (${r.status})`);
-        return r.json();
-      })
-      .catch(error=>{
-        busStopDatasetPromise=null;
-        throw error;
-      });
-  }
-  return busStopDatasetPromise;
-}
-
-function measureBusDistance(lat1,lng1,lat2,lng2){
-  const toRad=v=>v*Math.PI/180;
-  const earthRadius=6371000;
-  const dLat=toRad(lat2-lat1);
-  const dLng=toRad(lng2-lng1);
-  const a=Math.sin(dLat/2)**2
-    +Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
-  return earthRadius*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
-async function findNearbyBusStopFromDataset(lat,lng){
-  const stops=await loadBusStopDataset();
-  if(!Array.isArray(stops)||!stops.length)return null;
-  let nearest=null;
-  let nearestDistance=Infinity;
-  for(const stop of stops){
-    const dist=measureBusDistance(lat,lng,Number(stop.lat),Number(stop.lng));
-    if(dist<nearestDistance){
-      nearest=stop;
-      nearestDistance=dist;
-    }
-  }
-  if(!nearest)return null;
-  return {
-    nodeid:nearest.nodeId,
-    nodenm:nearest.stopName,
-    nodeno:nearest.stopNo,
-    citycode:nearest.cityCode,
-    cityname:nearest.cityName,
-    distanceMeters:Math.round(nearestDistance),
-    source:'local_dataset',
-  };
-}
-
-async function fetchNearbyBusStop(lat,lng){
-  try{
-    const localStop=await findNearbyBusStopFromDataset(lat,lng);
-    if(localStop)return localStop;
-  }catch{}
-  if(!BUS_API_KEY)return null;
-  const url=`/api/bus/stops`
-    +`?serviceKey=${encodeURIComponent(BUS_API_KEY)}&gpsLati=${encodeURIComponent(lat)}&gpsLong=${encodeURIComponent(lng)}&_type=json&numOfRows=10&pageNo=1`;
-  const r=await fetch(url);
-  if(!r.ok){
-    const detail=await readBusProxyError(r);
-    throw new Error(detail);
-  }
-  const d=await r.json();
-  return listFromApi(d?.response?.body?.items?.item)[0]||null;
-}
-
-async function fetchBusArrivals(cityCode,nodeId){
-  if(!BUS_API_KEY||!cityCode||!nodeId)return [];
-  const url=`/api/bus/arrivals`
-    +`?serviceKey=${encodeURIComponent(BUS_API_KEY)}&cityCode=${encodeURIComponent(cityCode)}&nodeId=${encodeURIComponent(nodeId)}&_type=json&numOfRows=10&pageNo=1`;
-  const r=await fetch(url);
-  if(!r.ok){
-    const detail=await readBusProxyError(r);
-    throw new Error(detail);
-  }
-  const d=await r.json();
-  const items=listFromApi(d?.response?.body?.items?.item);
-  return items
-    .filter(item=>item?.arrtime)
-    .sort((a,b)=>Number(a.arrtime||0)-Number(b.arrtime||0))
-    .slice(0,3);
-}
-
-async function readBusProxyError(response){
-  try{
-    const payload=await response.json();
-    if(payload?.status===403)return '버스 API 서비스키가 없거나, 해당 키에 버스 API 사용 권한이 없습니다.';
-    if(payload?.detail)return payload.detail;
-  }catch{}
-  return `버스 API 호출에 실패했습니다. (${response.status})`;
-}
-
-async function fetchBusInfoForSpot(spot){
-  if(!BUS_API_KEY){
-    return {status:'error',message:'설정에서 공공데이터포털 버스 API 서비스키를 먼저 입력해 주세요.'};
-  }
-  try{
-    const stop=await fetchNearbyBusStop(spot.lat,spot.lng);
-    if(!stop){
-      return {status:'empty',message:'주변 정류장 정보를 찾지 못했어요.'};
-    }
-    const arrivals=await fetchBusArrivals(stop.citycode,stop.nodeid);
-    return {
-      status:arrivals.length?'ok':'empty',
-      stopName:stop.nodenm||'가까운 정류장',
-      stopNo:stop.nodeno||'',
-      cityCode:stop.citycode||'',
-      arrivals:arrivals.map(item=>({
-        routeNo:item.routeno||item.routeNo||'버스',
-        routeType:item.routetp||'일반',
-        minutes:formatBusMinutes(item.arrtime),
-        stopsAway:item.arrprevstationcnt?`${item.arrprevstationcnt}정거장 전`:null,
-      })),
-      message:arrivals.length?'':`정류장은 찾았지만 실시간 도착 정보가 없어요.`,
-    };
-  }catch(error){
-    return {status:'error',message:error?.message||'버스 정보를 불러오지 못했어요.'};
-  }
-}
-
-async function loadBusInfoForCurrentCourse(){
-  const token=Date.now();
-  busLoadToken=token;
-  busInfoBySpot={};
-  busLoading=true;
-  render();
-
-  for(const spot of courseD){
-    const info=await fetchBusInfoForSpot(spot);
-    if(busLoadToken!==token)return;
-    busInfoBySpot[spot.n]=info;
-    render();
-  }
-
-  if(busLoadToken!==token)return;
-  busLoading=false;
-  render();
-}
-
-function renderBusInfo(spot){
-  const info=busInfoBySpot[spot.n];
-  if(!info&&busLoading){
-    return `<div class="tl-bus"><div class="tl-bus-head"><span>🚌 버스 접근</span><span>불러오는 중</span></div><div class="tl-bus-note">가까운 정류장과 도착 예정 버스를 확인하고 있어요.</div></div>`;
-  }
-  if(!info){
-    return '';
-  }
-  if(info.status==='error'){
-    return `<div class="tl-bus"><div class="tl-bus-head"><span>🚌 버스 접근</span><span>연결 실패</span></div><div class="tl-bus-note">${info.message}</div></div>`;
-  }
-  return `<div class="tl-bus">
-    <div class="tl-bus-head"><span>🚌 버스 접근</span><span>${info.arrivals?.length?`실시간 ${info.arrivals.length}건`:'도착 정보 없음'}</span></div>
-    <div class="tl-bus-stop">${info.stopName}${info.stopNo?` · 정류장 ${info.stopNo}`:''}</div>
-    ${info.arrivals?.length?`<div class="tl-bus-routes">${info.arrivals.map(route=>`<span class="tl-bus-route"><b>${route.routeNo}</b>${route.minutes}${route.stopsAway?` · ${route.stopsAway}`:''}</span>`).join('')}</div>`:''}
-    ${info.message?`<div class="tl-bus-note">${info.message}</div>`:''}
-  </div>`;
-}
 function initKakaoMap(){
   mapProvider='kakao';
   map=new kakao.maps.Map(document.getElementById('map'),{
@@ -1457,33 +1250,6 @@ function createPinOverlay(item,onClick){
   return overlay;
 }
 
-function drawFeaturedTrail(key){
-  const trail=FEATURED_TRAILS[key];
-  if(!trail?.points?.length)return;
-  if(mapProvider==='leaflet'){
-    const path=trail.points.map(point=>[point.lat,point.lng]);
-    const line=L.polyline(path,{
-      color:'#0ea5e9',
-      weight:5,
-      opacity:.78,
-      dashArray:'10 7',
-    }).addTo(map);
-    line.bindPopup(makePopupContent(trail.name,'여수 해안 중심 코스를 지도에 강조했어요.','추천 해안길'));
-    lines.push(line);
-    return;
-  }
-  const path=trail.points.map(point=>makeLatLng(point.lat,point.lng));
-  const line=new kakao.maps.Polyline({
-    path,
-    strokeWeight:5,
-    strokeColor:'#0ea5e9',
-    strokeOpacity:0.82,
-    strokeStyle:'dash',
-  });
-  line.setMap(map);
-  lines.push(line);
-}
-
 function plotOverview(focusKey=null){
   clearMap();
   if(mapProvider==='leaflet'){
@@ -1498,7 +1264,6 @@ function plotOverview(focusKey=null){
     }else if(points.length){
       map.fitBounds(points,{padding:[40,40]});
     }
-    drawFeaturedTrail(focusKey);
     map.setMaxBounds(JEONNAM_LEAFLET_BOUNDS);
     return;
   }
@@ -1517,7 +1282,6 @@ function plotOverview(focusKey=null){
   }else{
     map.setBounds(bounds);
   }
-  drawFeaturedTrail(focusKey);
   restrictKakaoMapBounds();
 }
 
@@ -1679,9 +1443,7 @@ function updateMapFrame(key=curRegion){
   const festivals=FESTIVALS[key]||[];
   const lockers=getLockerSummary(key);
   title.textContent=`${region.n} 지도 프리뷰`;
-  sub.textContent=key==='yeosu'
-    ? `해안·야경 흐름을 먼저 보고, 지도에는 대표 해안길을 표시해두었습니다. 이어서 축제 ${festivals.length}건과 보관함 ${lockers.locations}곳을 확인해보세요.`
-    : `${region.sub} 흐름을 먼저 보고, 아래에서 대표 축제 ${festivals.length}건과 보관함 ${lockers.locations}곳을 이어서 확인해보세요.`;
+  sub.textContent=`${region.sub} 흐름을 먼저 보고, 아래에서 대표 축제 ${festivals.length}건과 보관함 ${lockers.locations}곳을 이어서 확인해보세요.`;
   badge.textContent=`${lockers.avail}/${lockers.total||0}`;
   badgeLabel.textContent='보관함 여유';
 }
@@ -1886,7 +1648,6 @@ async function runSearch(){
   updateMapFrame(rk);
   render();
   plotCourse(courseD);
-  loadBusInfoForCurrentCourse();
   toSheet('half');
 
   btn.disabled=false;
@@ -1990,7 +1751,6 @@ function renderCourse(){
           <div class="tl-title">${item.n}</div>
           <div class="tl-body">${item.d}</div>
           <div class="tl-tags">${item.tags.map(tag=>`<span class="tl-tag">${tag}</span>`).join('')}</div>
-          ${renderBusInfo(item)}
           <div class="tl-cta">지도에서 보기</div>
         </button>
         <div class="tl-actions">
@@ -2151,7 +1911,6 @@ async function jumpR(key){
   setActiveTab('course');
   render();
   plotCourse(courseD);
-  loadBusInfoForCurrentCourse();
   toSheet('half');
 }
 
@@ -2170,7 +1929,6 @@ function toast(msg){
 function openModal(){
   document.getElementById('apiModal').classList.add('open');
   document.getElementById('keyInput').value=API_KEY;
-  document.getElementById('busKeyInput').value=BUS_API_KEY;
 }
 
 function closeModal(){
@@ -2183,15 +1941,11 @@ document.getElementById('apiModal').addEventListener('click',e=>{
 
 function saveKey(){
   const k=document.getElementById('keyInput').value.trim();
-  const busKey=document.getElementById('busKeyInput').value.trim();
   API_KEY=k||DEFAULT_API_KEY;
-  BUS_API_KEY=busKey||DEFAULT_BUS_API_KEY;
   if(k)localStorage.setItem('tapi',k);
   else localStorage.removeItem('tapi');
-  if(busKey)localStorage.setItem('bus_api_key',busKey);
-  else localStorage.removeItem('bus_api_key');
   closeModal();
-  toast('✅ Tour API / 버스 API 설정이 저장됐습니다');
+  toast('✅ Tour API 설정이 저장됐습니다');
 }
 
 let drag={on:false,y0:0};
