@@ -15,8 +15,11 @@ ROOT_DIR = Path(__file__).resolve().parent
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8001"))
 DEFAULT_BUS_API_KEY = "8e57fbd128fc9910c31a1bdab4446063b097b2f59b6f24cdc208abb18fde2ece"
+DEFAULT_LOCKER_API_KEY = "c8d7a4c439a6ab3c5c9028a2e513913701fa8caa7c07cfa2e024187e3e8b7d42"
 BUS_STOP_API_URL = "https://apis.data.go.kr/1613000/BusSttnInfoInqireService/getCrdntPrxmtSttnList"
 BUS_ARRIVAL_API_URL = "https://apis.data.go.kr/1613000/ArvlInfoInqireService/getSttnAcctoArvlPrearngeInfoList"
+LOCKER_INFO_API_URL = "https://apis.data.go.kr/B551982/psl_v2/locker_info_v2"
+LOCKER_REALTIME_API_URL = "https://apis.data.go.kr/B551982/psl_v2/locker_realtime_use_v2"
 
 
 class DemoRequestHandler(SimpleHTTPRequestHandler):
@@ -47,6 +50,14 @@ class DemoRequestHandler(SimpleHTTPRequestHandler):
             self.handle_bus_arrivals()
             return
 
+        if self.path.startswith("/api/locker/info"):
+            self.handle_locker_info()
+            return
+
+        if self.path.startswith("/api/locker/realtime"):
+            self.handle_locker_realtime()
+            return
+
         if self.path == "/":
             self.path = "/index.html"
 
@@ -59,6 +70,9 @@ class DemoRequestHandler(SimpleHTTPRequestHandler):
 
     def get_bus_api_key(self, params: dict[str, list[str]]) -> str:
         return params.get("serviceKey", [os.environ.get("BUS_API_KEY", DEFAULT_BUS_API_KEY)])[0]
+
+    def get_locker_api_key(self, params: dict[str, list[str]]) -> str:
+        return params.get("serviceKey", [os.environ.get("LOCKER_API_KEY", DEFAULT_LOCKER_API_KEY)])[0]
 
     def send_json(self, status: HTTPStatus, payload: dict) -> None:
         body = json.dumps(payload).encode("utf-8")
@@ -121,6 +135,42 @@ class DemoRequestHandler(SimpleHTTPRequestHandler):
                 "nodeId": node_id,
                 "_type": "json",
                 "numOfRows": params.get("numOfRows", ["10"])[0],
+                "pageNo": params.get("pageNo", ["1"])[0],
+            },
+        )
+
+    def handle_locker_info(self) -> None:
+        parsed = urlparse(self.path)
+        params = parse_qs(parsed.query)
+        stdg_cd = params.get("stdgCd", [""])[0]
+        if not stdg_cd:
+            self.send_json(HTTPStatus.BAD_REQUEST, {"error": "missing_stdgCd"})
+            return
+        self.proxy_public_data(
+            LOCKER_INFO_API_URL,
+            {
+                "serviceKey": self.get_locker_api_key(params),
+                "stdgCd": stdg_cd,
+                "type": params.get("type", ["JSON"])[0],
+                "numOfRows": params.get("numOfRows", ["200"])[0],
+                "pageNo": params.get("pageNo", ["1"])[0],
+            },
+        )
+
+    def handle_locker_realtime(self) -> None:
+        parsed = urlparse(self.path)
+        params = parse_qs(parsed.query)
+        stdg_cd = params.get("stdgCd", [""])[0]
+        if not stdg_cd:
+            self.send_json(HTTPStatus.BAD_REQUEST, {"error": "missing_stdgCd"})
+            return
+        self.proxy_public_data(
+            LOCKER_REALTIME_API_URL,
+            {
+                "serviceKey": self.get_locker_api_key(params),
+                "stdgCd": stdg_cd,
+                "type": params.get("type", ["JSON"])[0],
+                "numOfRows": params.get("numOfRows", ["200"])[0],
                 "pageNo": params.get("pageNo", ["1"])[0],
             },
         )
