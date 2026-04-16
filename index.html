@@ -436,16 +436,20 @@ body{
 
 /* ── SEARCH PANEL ── */
 .sp-panel{
-  position:fixed;top:0;left:0;right:0;z-index:700;
+  position:fixed;
+  top:calc(var(--header-offset) - 8px);
+  left:50%;
+  width:min(var(--layout-max),calc(100vw - var(--frame-gap)*2));
+  z-index:980;
   background:var(--paper);
-  border-radius:0 0 28px 28px;
+  border-radius:28px;
   padding:20px 20px 24px;
-  transform:translateY(-110%);
+  transform:translate(-50%,-110%);
   transition:transform .35s cubic-bezier(.32,.72,0,1);
   box-shadow:0 8px 40px rgba(45,90,61,.2);
-  border-bottom:1px solid var(--paper3);
+  border:1px solid var(--paper3);
 }
-.sp-panel.open{transform:translateY(0)}
+.sp-panel.open{transform:translate(-50%,0)}
 .sp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
 .sp-title{font-family:var(--font-display);font-size:19px;font-weight:700}
 .sp-close{
