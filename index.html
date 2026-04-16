@@ -684,6 +684,17 @@ body{
   padding:14px 14px 13px;border-radius:18px;
   background:rgba(255,255,255,.8);
   border:1px solid rgba(255,255,255,.92);
+  width:100%;
+  text-align:left;
+  font-family:inherit;
+  cursor:pointer;
+  transition:transform .18s,box-shadow .18s,border-color .18s,background .18s;
+}
+.locker-feature-card:hover{
+  transform:translateY(-1px);
+  background:#fff;
+  border-color:rgba(82,160,106,.28);
+  box-shadow:0 12px 24px rgba(47,105,64,.1);
 }
 .locker-feature-head{
   display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
@@ -917,7 +928,6 @@ body{
     <div class="tabs" id="tabs">
       <div class="t-tab on" onclick="onTab('course',this)">코스</div>
       <div class="t-tab" onclick="onTab('crowd',this)">혼잡도</div>
-      <div class="t-tab" onclick="onTab('locker',this)">보관함</div>
     </div>
 
     <div class="sheet-body" id="sheetBody">
@@ -992,7 +1002,7 @@ body{
 const DEFAULT_API_KEY='8e57fbd128fc9910c31a1bdab4446063b097b2f59b6f24cdc208abb18fde2ece';
 const storedApiKey=localStorage.getItem('tapi');
 let API_KEY=storedApiKey===null?DEFAULT_API_KEY:storedApiKey;
-let map,markers=[],lines=[],courseMarkers=[],activeInfoOverlay=null;
+let map,markers=[],lines=[],courseMarkers=[],activeInfoOverlay=null,activeLeafletPopup=null;
 let mapProvider='leaflet';
 let curTab='course',curRegion=null;
 let crowdD=[],courseD=[],lockerD=[];
@@ -1102,6 +1112,14 @@ const LOCKERS={
     {n:'강진버스터미널 보관함',addr:'강진군 탐진로 36',avail:7,total:10,lat:34.6420,lng:126.7680},
   ],
 };
+const LOCKER_POINTS={
+  yeosu:[[34.7607,127.6598],[34.7458,127.7452]],
+  suncheon:[[34.9436,127.4914],[34.9176,127.4891]],
+  damyang:[[35.3226,126.9891],[35.3206,126.9854]],
+  mokpo:[[34.8116,126.3930],[34.7988,126.3880]],
+  boseong:[[34.7715,127.0800]],
+  gangjin:[[34.6420,126.7680]],
+};
 const FESTIVALS={
   yeosu:[
     {season:'봄·초여름',date:'2026.04.18 - 04.20',name:'해양 야경 페스타',place:'이순신광장 · 해양공원',copy:'밤바다 산책, 버스킹, 해상 포토스팟을 묶어 보기 좋은 시즌형 행사예요.'},
@@ -1192,6 +1210,10 @@ function clearMap(){
     markers.forEach(m=>m.setMap(null));
     lines.forEach(l=>l.setMap(null));
   }else{
+    if(activeLeafletPopup){
+      map.closePopup(activeLeafletPopup);
+      activeLeafletPopup=null;
+    }
     markers.forEach(m=>map.removeLayer(m));
     lines.forEach(l=>map.removeLayer(l));
   }
@@ -1252,6 +1274,36 @@ function showInfoOverlay(item,tag){
     yAnchor:1.8,
   });
   activeInfoOverlay.setMap(map);
+}
+
+function getLockerPoint(regionKey,index){
+  const locker=LOCKERS[regionKey]?.[index];
+  if(!locker)return null;
+  const coords=LOCKER_POINTS[regionKey]?.[index];
+  if(coords)return {...locker,lat:coords[0],lng:coords[1],e:'🧳',bg:'#ede9fe'};
+  return {...locker,...RG[regionKey],e:'🧳',bg:'#ede9fe'};
+}
+
+function focusMapPoint(item,tag='보관함 위치'){
+  if(!item||typeof item.lat!=='number'||typeof item.lng!=='number')return;
+  if(mapProvider==='kakao'){
+    map.setLevel(5);
+    map.panTo(makeLatLng(item.lat,item.lng));
+    showInfoOverlay(item,tag);
+    return;
+  }
+  if(activeLeafletPopup){
+    map.closePopup(activeLeafletPopup);
+  }
+  map.flyTo([item.lat,item.lng],13,{duration:.8});
+  activeLeafletPopup=L.popup({
+    closeButton:false,
+    className:'map-popup-shell',
+    offset:[0,-18],
+  })
+    .setLatLng([item.lat,item.lng])
+    .setContent(makePopupContent(item.n,item.addr||item.d||'',tag))
+    .openOn(map);
 }
 
 function createPinOverlay(item,onClick){
@@ -1512,7 +1564,7 @@ function renderFestivalSection(key,limit=2){
   </div>`;
 }
 
-function renderLockerPreviewSection(items){
+function renderLockerPreviewSection(regionKey,items){
   if(!items.length){
     return `<div class="empty" style="padding-top:18px"><div class="empty-s">코스를 찾으면 지역 보관함 여유 현황을 보여드려요.</div></div>`;
   }
@@ -1549,7 +1601,7 @@ function renderLockerPreviewSection(items){
       const state=item.avail===0?'full':ratio<0.35?'warn':'ok';
       const label=state==='full'?'만석':state==='warn'?'혼잡':'여유';
       const fillColor=state==='full'?'#ef4444':state==='warn'?'#d97706':'var(--leaf)';
-      return `<button class="locker-feature-card" type="button" onclick="focusLocker(${index},'${curRegion||getBestRegionKey()}')">
+      return `<button class="locker-feature-card" type="button" onclick="focusLocker(${index},'${regionKey}')">
         <div class="locker-feature-head">
           <div>
             <span class="locker-preview-name">${item.n}</span>
@@ -1571,14 +1623,14 @@ function renderSideRail(key,items){
   const activeKey=key&&RG[key]?key:getBestRegionKey();
   const sourceItems=(items&&items.length)?items:(LOCKERS[activeKey]||[]);
   target.innerHTML=`
-    ${renderLockerPreviewSection(sourceItems)}
+    ${renderLockerPreviewSection(activeKey,sourceItems)}
     ${renderFestivalSection(activeKey,3)}
   `;
 }
 
 function setActiveTab(name){
   curTab=name;
-  const index={course:0,crowd:1,locker:2}[name];
+  const index={course:0,crowd:1}[name]??0;
   document.querySelectorAll('.t-tab').forEach((tab,i)=>tab.classList.toggle('on',i===index));
 }
 
@@ -1747,8 +1799,7 @@ function render(){
   renderSideRail(curRegion,lockerD);
   const body=document.getElementById('sheetBody');
   if(curTab==='course')body.innerHTML=renderCourse();
-  else if(curTab==='crowd')body.innerHTML=renderCrowd();
-  else body.innerHTML=renderLocker();
+  else body.innerHTML=renderCrowd();
 }
 
 function renderCourse(){
@@ -1922,8 +1973,7 @@ function openLockerTab(){
     toast('🧳 보관함 정보는 코스 추천 후 볼 수 있어요');
     return;
   }
-  setActiveTab('locker');
-  render();
+  focusLocker(0,curRegion);
   toSheet('half');
 }
 
