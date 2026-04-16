@@ -1409,7 +1409,9 @@ function getKakaoMode(){
 }
 
 function buildKakaoPlaceUrl(spot){
-  return `https://map.kakao.com/link/to/${encodeURIComponent(spot.n)},${spot.lat},${spot.lng}`;
+  const regionName=curRegion&&RG[curRegion]?.n?`${RG[curRegion].n} `:'';
+  const query=`${regionName}${spot.n}`.trim();
+  return `https://map.kakao.com/?q=${encodeURIComponent(query)}`;
 }
 
 function buildKakaoDirectionsUrl(spot,index){
