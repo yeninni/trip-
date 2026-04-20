@@ -1474,26 +1474,33 @@ function getKakaoSpotLabel(spot){
 
 function buildKakaoPlaceUrl(spot){
   const lockerEntry=getLockerEntryForSpot(spot);
+  const lat=typeof lockerEntry?.lat==='number'?lockerEntry.lat:spot.lat;
+  const lng=typeof lockerEntry?.lng==='number'?lockerEntry.lng:spot.lng;
+  const name=getKakaoSpotLabel(spot);
+  if(typeof lat==='number'&&typeof lng==='number'){
+    return `https://map.kakao.com/link/map/${encodeURIComponent(name)},${lat},${lng}`;
+  }
   const regionName=curRegion&&RG[curRegion]?.n?`${RG[curRegion].n} `:'';
   const query=lockerEntry
-    ? `${getKakaoSpotLabel(spot)} ${lockerEntry.addr}`.trim()
+    ? `${name} ${lockerEntry.addr}`.trim()
     : `${regionName}${spot.n}`.trim();
   return `https://map.kakao.com/?q=${encodeURIComponent(query)}`;
 }
 
 function buildKakaoDirectionsUrl(spot,index){
+  const toLocker=getLockerEntryForSpot(spot);
+  const toLat=typeof toLocker?.lat==='number'?toLocker.lat:spot.lat;
+  const toLng=typeof toLocker?.lng==='number'?toLocker.lng:spot.lng;
+  const toName=getKakaoSpotLabel(spot);
   if(index===0){
-    return buildKakaoPlaceUrl(spot);
+    return `https://map.kakao.com/link/to/${encodeURIComponent(toName)},${toLat},${toLng}`;
   }
   const from=courseD[index-1];
   const fromLocker=getLockerEntryForSpot(from);
-  const toLocker=getLockerEntryForSpot(spot);
   const fromLat=typeof fromLocker?.lat==='number'?fromLocker.lat:from.lat;
   const fromLng=typeof fromLocker?.lng==='number'?fromLocker.lng:from.lng;
-  const toLat=typeof toLocker?.lat==='number'?toLocker.lat:spot.lat;
-  const toLng=typeof toLocker?.lng==='number'?toLocker.lng:spot.lng;
-  const mode=getKakaoMode();
-  return `https://map.kakao.com/link/by/${mode}/${encodeURIComponent(getKakaoSpotLabel(from))},${fromLat},${fromLng}/${encodeURIComponent(getKakaoSpotLabel(spot))},${toLat},${toLng}`;
+  const fromName=getKakaoSpotLabel(from);
+  return `https://map.kakao.com/link/from/${encodeURIComponent(fromName)},${fromLat},${fromLng}/to/${encodeURIComponent(toName)},${toLat},${toLng}`;
 }
 
 function getLockerApiItems(payload){
