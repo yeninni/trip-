@@ -1006,6 +1006,8 @@ let map,markers=[],lines=[],courseMarkers=[],activeInfoOverlay=null,activeLeafle
 let mapProvider='leaflet';
 let curTab='course',curRegion=null;
 let crowdD=[],courseD=[],lockerD=[];
+let festivalD=null;
+let festivalMeta={source:'sample',requestedDate:null};
 let kakaoBoundsGuard=false;
 
 const JEONNAM_BOUNDS={
@@ -1120,7 +1122,7 @@ const LOCKER_POINTS={
   boseong:[[34.7715,127.0800]],
   gangjin:[[34.6420,126.7680]],
 };
-const FESTIVALS={
+const SAMPLE_FESTIVALS={
   yeosu:[
     {season:'봄·초여름',date:'2026.04.18 - 04.20',name:'해양 야경 페스타',place:'이순신광장 · 해양공원',copy:'밤바다 산책, 버스킹, 해상 포토스팟을 묶어 보기 좋은 시즌형 행사예요.'},
     {season:'가을',date:'2026.05.02 - 05.04',name:'섬·바다 문화주간',place:'오동도 · 엑스포 일대',copy:'섬 산책과 바다 전망 코스를 느긋하게 연결하기 좋은 분위기예요.'},
@@ -1149,6 +1151,115 @@ const FESTIVALS={
 function listFromApi(items){
   if(Array.isArray(items))return items;
   return items?[items]:[];
+}
+
+function compactDate(value){
+  const digits=String(value||'').replace(/\D/g,'');
+  return digits.length===8?digits:'';
+}
+
+function buildFestivalDateRange(start,end){
+  const from=compactDate(start);
+  const to=compactDate(end);
+  if(!from&&!to)return'일정 미정';
+  const format=digits=>`${digits.slice(0,4)}.${digits.slice(4,6)}.${digits.slice(6,8)}`;
+  if(from&&to&&from!==to)return`${format(from)} - ${format(to)}`;
+  return format(from||to);
+}
+
+function getFestivalSeason(value){
+  const digits=compactDate(value);
+  const month=Number(digits.slice(4,6)||0);
+  if(month>=3&&month<=5)return'봄';
+  if(month>=6&&month<=8)return'여름';
+  if(month>=9&&month<=11)return'가을';
+  return'겨울';
+}
+
+function buildEmptyFestivalMap(){
+  return Object.keys(RG).reduce((acc,key)=>{
+    acc[key]=[];
+    return acc;
+  },{});
+}
+
+function getFestivalItems(key){
+  if(festivalMeta.source==='api'&&festivalD)return festivalD[key]||[];
+  return SAMPLE_FESTIVALS[key]||[];
+}
+
+function matchFestivalRegionKey(item){
+  return nm2k([item.title,item.eventplace,item.addr1,item.addr2].filter(Boolean).join(' '));
+}
+
+function parseFestivalItems(items,date){
+  const selected=compactDate(date);
+  const grouped=buildEmptyFestivalMap();
+  listFromApi(items).forEach(item=>{
+    const key=matchFestivalRegionKey(item);
+    if(!key)return;
+    const start=compactDate(item.eventstartdate);
+    const end=compactDate(item.eventenddate)||start;
+    if(selected&&end&&end<selected)return;
+    grouped[key].push({
+      season:getFestivalSeason(start||selected),
+      date:buildFestivalDateRange(start,end),
+      name:item.title||'행사 정보',
+      place:item.eventplace||item.addr1||RG[key].n,
+      copy:item.addr1&&item.eventplace&&item.addr1!==item.eventplace
+        ? item.addr1
+        : item.tel||item.addr2||'TourAPI 행사 정보',
+      _start:start||'99999999',
+      _end:end||'99999999',
+    });
+  });
+  Object.keys(grouped).forEach(key=>{
+    grouped[key].sort((a,b)=>{
+      const aPriority=selected&&a._start<=selected&&a._end>=selected?0:1;
+      const bPriority=selected&&b._start<=selected&&b._end>=selected?0:1;
+      if(aPriority!==bPriority)return aPriority-bPriority;
+      return a._start.localeCompare(b._start);
+    });
+    grouped[key]=grouped[key].map(({_start,_end,...item})=>item);
+  });
+  return grouped;
+}
+
+async function fetchFestivals(date,{silent=false}={}){
+  if(!API_KEY)return{source:'sample',byRegion:null};
+  const url=`/api/tour/festivals?serviceKey=${encodeURIComponent(API_KEY)}&eventDate=${compactDate(date)}&numOfRows=200`;
+  try{
+    const r=await fetch(url);
+    if(!r.ok)throw 0;
+    const d=await r.json();
+    const body=d?.response?.body;
+    const items=body?.items?.item;
+    if(!items&&Number(body?.totalCount||0)!==0)throw 0;
+    if(!silent)toast('✅ 축제 API 연동');
+    return {
+      source:'api',
+      byRegion:Number(body?.totalCount||0)===0?buildEmptyFestivalMap():parseFestivalItems(items,date),
+    };
+  }catch{
+    if(!silent)toast('⚠️ 축제 예시 일정 사용');
+    return{source:'sample',byRegion:null};
+  }
+}
+
+function applyFestivalData(result,date){
+  festivalMeta={source:result.source,requestedDate:date};
+  festivalD=result.byRegion;
+}
+
+async function refreshFestivals(date,options={}){
+  const result=await fetchFestivals(date,options);
+  applyFestivalData(result,date);
+  updateMapFrame(curRegion);
+  if(!crowdD.length&&!courseD.length){
+    renderLandingState();
+    return;
+  }
+  render();
 }
 
 function initKakaoMap(){
@@ -1478,6 +1589,7 @@ function syncDatePreset(){
 function applyDatePreset(kind){
   document.getElementById('tdate').value=formatInputDate(getPresetDate(kind));
   syncDatePreset();
+  refreshFestivals(document.getElementById('tdate').value,{silent:true});
 }
 
 function getCrowdEntry(key){
@@ -1532,7 +1644,7 @@ function updateMapFrame(key=curRegion){
     return;
   }
   const region=RG[key];
-  const festivals=FESTIVALS[key]||[];
+  const festivals=getFestivalItems(key);
   const lockers=getLockerSummary(key);
   title.textContent=`${region.n} 지도 프리뷰`;
   sub.textContent=`${region.sub} 흐름을 먼저 보고, 아래에서 대표 축제 ${festivals.length}건과 보관함 ${lockers.locations}곳을 이어서 확인해보세요.`;
@@ -1541,26 +1653,32 @@ function updateMapFrame(key=curRegion){
 }
 
 function renderFestivalSection(key,limit=2){
-  const items=(FESTIVALS[key]||[]).slice(0,limit);
+  const items=getFestivalItems(key).slice(0,limit);
   if(!items.length){
-    return `<div class="empty" style="padding-top:18px"><div class="empty-s">대표 축제 정보를 준비 중이에요.</div></div>`;
+    return `<div class="empty" style="padding-top:18px"><div class="empty-s">선택한 날짜 기준 축제 정보를 준비 중이에요.</div></div>`;
   }
+  const note=festivalMeta.source==='api'
+    ? `TourAPI 행사정보 · ${formatDateLabel(festivalMeta.requestedDate||formatInputDate(new Date()))} 기준`
+    : 'API 연동 전 예시 일정이에요';
+  const foot=festivalMeta.source==='api'
+    ? '선택한 날짜와 겹치거나 그 이후에 이어지는 행사만 추려서 보여줘요.'
+    : '축제 API가 실패하면 이 예시 일정이 fallback으로 표시돼요.';
   return `<div class="info-panel">
     <div class="info-panel-head">
       <div class="info-panel-title">다가오는 축제 일정</div>
-      <div class="info-panel-note">API 연동 전 예시 일정이에요</div>
+      <div class="info-panel-note">${note}</div>
     </div>
     <div class="festival-schedule">${items.map(item=>`
       <div class="festival-row">
         <div class="festival-date">${item.date||item.season}</div>
         <div>
           <div class="festival-name">${item.name}</div>
-          <div class="festival-meta">📍 ${item.place} · ${item.copy}</div>
+          <div class="festival-meta">📍 ${[item.place,item.copy].filter(Boolean).join(' · ')}</div>
         </div>
         <div class="festival-chip">${item.season}</div>
       </div>
     `).join('')}</div>
-    <div class="festival-foot">실제 배포 단계에서는 축제 API 데이터로 자동 갱신할 예정입니다.</div>
+    <div class="festival-foot">${foot}</div>
   </div>`;
 }
 
@@ -1725,7 +1843,12 @@ async function runSearch(){
 
   document.getElementById('spDate').textContent=formatDateLabel(date);
   setLoading();
-  crowdD=await fetchCrowd(date);
+  const [crowdResult,festivalResult]=await Promise.all([
+    fetchCrowd(date),
+    fetchFestivals(date),
+  ]);
+  crowdD=crowdResult;
+  applyFestivalData(festivalResult,date);
 
   const sel=document.getElementById('rsel').value;
   const rk=sel||crowdD.find(r=>r.level==='low')?.key||crowdD[0]?.key;
@@ -2086,12 +2209,16 @@ document.addEventListener('DOMContentLoaded',()=>{
   const boot=()=>{
     initMap();
     document.getElementById('tdate').value=formatInputDate(new Date());
-    document.getElementById('tdate').addEventListener('change',syncDatePreset);
+    document.getElementById('tdate').addEventListener('change',e=>{
+      syncDatePreset();
+      refreshFestivals(e.target.value,{silent:true});
+    });
     syncDatePreset();
     updatePeek();
     renderLandingState();
     setPillOn(null);
     window.addEventListener('resize',refreshMapLayout);
+    refreshFestivals(document.getElementById('tdate').value,{silent:true});
     if(window.innerWidth>=768){
       document.getElementById('sheet').className='sheet';
       document.getElementById('sheet').style.transform='translateY(0)';

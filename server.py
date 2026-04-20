@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timedelta
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -14,9 +15,12 @@ from urllib.request import urlopen
 ROOT_DIR = Path(__file__).resolve().parent
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8001"))
-DEFAULT_BUS_API_KEY = "8e57fbd128fc9910c31a1bdab4446063b097b2f59b6f24cdc208abb18fde2ece"
+DEFAULT_PUBLIC_API_KEY = "8e57fbd128fc9910c31a1bdab4446063b097b2f59b6f24cdc208abb18fde2ece"
+DEFAULT_BUS_API_KEY = DEFAULT_PUBLIC_API_KEY
+DEFAULT_TOUR_API_KEY = DEFAULT_PUBLIC_API_KEY
 BUS_STOP_API_URL = "https://apis.data.go.kr/1613000/BusSttnInfoInqireService/getCrdntPrxmtSttnList"
 BUS_ARRIVAL_API_URL = "https://apis.data.go.kr/1613000/ArvlInfoInqireService/getSttnAcctoArvlPrearngeInfoList"
+TOUR_FESTIVAL_API_URL = "https://apis.data.go.kr/B551011/KorService1/searchFestival1"
 
 
 class DemoRequestHandler(SimpleHTTPRequestHandler):
@@ -47,6 +51,10 @@ class DemoRequestHandler(SimpleHTTPRequestHandler):
             self.handle_bus_arrivals()
             return
 
+        if self.path.startswith("/api/tour/festivals"):
+            self.handle_tour_festivals()
+            return
+
         if self.path == "/":
             self.path = "/index.html"
 
@@ -59,6 +67,9 @@ class DemoRequestHandler(SimpleHTTPRequestHandler):
 
     def get_bus_api_key(self, params: dict[str, list[str]]) -> str:
         return params.get("serviceKey", [os.environ.get("BUS_API_KEY", DEFAULT_BUS_API_KEY)])[0]
+
+    def get_tour_api_key(self, params: dict[str, list[str]]) -> str:
+        return params.get("serviceKey", [os.environ.get("TOUR_API_KEY", DEFAULT_TOUR_API_KEY)])[0]
 
     def send_json(self, status: HTTPStatus, payload: dict) -> None:
         body = json.dumps(payload).encode("utf-8")
@@ -122,6 +133,36 @@ class DemoRequestHandler(SimpleHTTPRequestHandler):
                 "_type": "json",
                 "numOfRows": params.get("numOfRows", ["10"])[0],
                 "pageNo": params.get("pageNo", ["1"])[0],
+            },
+        )
+
+    def handle_tour_festivals(self) -> None:
+        parsed = urlparse(self.path)
+        params = parse_qs(parsed.query)
+        event_date = params.get("eventDate", [""])[0].replace("-", "")
+        try:
+            selected_date = datetime.strptime(event_date, "%Y%m%d")
+        except ValueError:
+            self.send_json(HTTPStatus.BAD_REQUEST, {"error": "invalid_event_date"})
+            return
+
+        # TourAPI searchFestival1 filters by event start date, so we widen the
+        # lookup window a bit and let the client keep only the relevant entries.
+        event_start_date = (selected_date - timedelta(days=30)).strftime("%Y%m%d")
+
+        self.proxy_public_data(
+            TOUR_FESTIVAL_API_URL,
+            {
+                "serviceKey": self.get_tour_api_key(params),
+                "MobileOS": "ETC",
+                "MobileApp": "EcoTravel",
+                "_type": "json",
+                "listYN": "Y",
+                "arrange": params.get("arrange", ["A"])[0],
+                "numOfRows": params.get("numOfRows", ["200"])[0],
+                "pageNo": params.get("pageNo", ["1"])[0],
+                "areaCode": params.get("areaCode", ["38"])[0],
+                "eventStartDate": params.get("eventStartDate", [event_start_date])[0],
             },
         )
 
