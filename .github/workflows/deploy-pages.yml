@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main
+      - ui
   workflow_dispatch:
 
 permissions:
@@ -33,7 +33,7 @@ jobs:
         run: |
           mkdir dist
           cp index.html dist/index.html
-          cp -R assets dist/assets
+          cp -r assets dist/assets
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

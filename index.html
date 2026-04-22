@@ -353,7 +353,7 @@ body{
 .tl-action-link.secondary{
   background:rgba(82,160,106,.12);
 }
-.tl-when{display:none}
+.tl-when{font-size:11px;font-weight:600;color:var(--ink4);letter-spacing:.06em;text-transform:uppercase}
 .tl-title{font-family:var(--font-display);font-size:15px;font-weight:700;margin-top:3px}
 .tl-body{font-size:12px;color:var(--ink3);margin-top:4px;line-height:1.55}
 .tl-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
@@ -363,7 +363,7 @@ body{
   background:var(--paper3);color:var(--ink3);font-weight:500;
 }
 .tl-transit{
-  display:none;
+  display:flex;align-items:center;gap:8px;
   padding:0 0 16px 54px;
   font-size:11px;color:var(--ink4);font-weight:500;
 }
@@ -547,6 +547,9 @@ body{
   display:flex;align-items:center;justify-content:space-between;
   margin-top:20px;margin-bottom:12px;font-size:12px;font-weight:700;color:var(--ink3);
 }
+.preview-panel-shell{
+  display:flex;flex-direction:column;gap:16px;min-height:100%;
+}
 .landing-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .region-card{
   border:none;cursor:pointer;text-align:left;
@@ -588,7 +591,6 @@ body{
   background:rgba(255,255,255,.82);
   box-shadow:inset 0 0 0 1px rgba(125,201,111,.24);
 }
-.access-card{display:none!important}
 .info-split{
   padding:12px 20px 0;
   display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.95fr);gap:12px;
@@ -598,6 +600,9 @@ body{
   background:linear-gradient(180deg,rgba(255,255,255,.86),rgba(240,250,234,.84));
   border:1px solid rgba(255,255,255,.86);
   box-shadow:0 12px 26px rgba(47,105,64,.09);
+}
+.side-rail .info-panel{
+  padding:16px 14px 14px;
 }
 .side-rail .info-panel{
   padding:16px 14px 14px;
@@ -786,15 +791,20 @@ body{
     margin:calc(var(--header-offset) + 14px) var(--frame-gap) 34px;
     grid-template-columns:1fr;
   }
-  #map-wrap{
+  .app-column,
+  .map-column,
+  .festival-rail,
+  .side-rail{
+    height:auto;
+    min-height:0;
     position:relative;top:auto;
+  }
+  #map-wrap{
+    flex:none;
     height:340px;min-height:340px;
   }
   .sheet{
     min-height:0;
-  }
-  .side-rail{
-    position:relative;top:auto;
   }
   .info-split{grid-template-columns:1fr}
   .locker-hero{grid-template-columns:1fr}
@@ -810,6 +820,8 @@ body{
   .app-shell{
     margin-top:calc(var(--header-offset) + 12px);
   }
+  .preview-panel-head{display:block}
+  .preview-panel-note{margin-top:6px;text-align:left}
   .landing-hero-shell{align-items:flex-start}
   .landing-hero-art{width:92px;min-height:92px;border-radius:22px}
   .landing-hero-art img{height:70px;border-radius:16px}
@@ -883,7 +895,13 @@ body{
 
   <!-- PILLS -->
   <div class="pill-row" id="pillRow">
-    <div class="eco-pill on" onclick="onPill(this,'')"><div class="p-dot"></div>전남</div>
+    <div class="eco-pill on" onclick="onPill(this,'')"><div class="p-dot"></div>전체 추천</div>
+    <div class="eco-pill" onclick="onPill(this,'yeosu')"><div class="p-dot" style="background:#0ea5e9"></div>여수</div>
+    <div class="eco-pill" onclick="onPill(this,'suncheon')"><div class="p-dot" style="background:var(--leaf)"></div>순천</div>
+    <div class="eco-pill" onclick="onPill(this,'damyang')"><div class="p-dot" style="background:#65a30d"></div>담양</div>
+    <div class="eco-pill" onclick="onPill(this,'mokpo')"><div class="p-dot" style="background:var(--earth2)"></div>목포</div>
+    <div class="eco-pill" onclick="onPill(this,'boseong')"><div class="p-dot" style="background:#059669"></div>보성</div>
+    <div class="eco-pill" onclick="onPill(this,'gangjin')"><div class="p-dot" style="background:#7c3aed"></div>강진</div>
   </div>
 </div>
 
@@ -894,11 +912,11 @@ body{
       <div>
         <div class="map-frame-kicker">Map Preview</div>
         <div class="map-frame-title" id="mapFrameTitle">전남 전역 미리보기</div>
-        <div class="map-frame-sub" id="mapFrameSub">지도를 눌러 지역 분위기를 먼저 보고, 아래 카드에서 축제와 코스 정보를 확인해보세요.</div>
+        <div class="map-frame-sub" id="mapFrameSub">지도를 눌러 지역 분위기를 먼저 보고, 아래 카드에서 축제와 보관함 정보를 이어서 확인해보세요.</div>
       </div>
-      <div class="map-frame-badge" style="display:none">
-        <strong id="mapFrameBadge"></strong>
-        <span id="mapFrameBadgeLabel"></span>
+      <div class="map-frame-badge">
+        <strong id="mapFrameBadge">6곳</strong>
+        <span id="mapFrameBadgeLabel">추천 지역</span>
       </div>
     </div>
   </div>
@@ -1001,9 +1019,6 @@ let map,markers=[],lines=[],courseMarkers=[],activeInfoOverlay=null,activeLeafle
 let mapProvider='leaflet';
 let curTab='course',curRegion=null;
 let crowdD=[],courseD=[],lockerD=[];
-let lockerFetchId=0;
-let festivalD=null;
-let festivalMeta={source:'sample',requestedDate:null};
 let kakaoBoundsGuard=false;
 
 const JEONNAM_BOUNDS={
@@ -1086,18 +1101,6 @@ const COURSES={
     {t:'stay', e:'🏠',bg:'#fce7f3',n:'강진 고택 민박',  when:'17:00',d:'조용한 역사 마을 숙박',          tags:['숙박'],       lat:34.6421,lng:126.7671},
   ],
 };
-const REGION_STDG_CODES={
-  yeosu:'4613000000',
-  suncheon:'4615000000',
-  damyang:'4671000000',
-  mokpo:'4611000000',
-  boseong:'4678000000',
-  gangjin:'4681000000',
-};
-const LOCKER_API_KEY='c8d7a4c439a6ab3c5c9028a2e513913701fa8caa7c07cfa2e024187e3e8b7d42';
-const LOCKER_INFO_PUBLIC_URL='https://apis.data.go.kr/B551982/psl_v2/locker_info_v2';
-const LOCKER_DETAIL_PUBLIC_URL='https://apis.data.go.kr/B551982/psl_v2/locker_detail_info_v2';
-
 const LOCKERS={
   yeosu:   [
     {n:'여수엑스포역 보관함',addr:'여수시 박람회길 1',avail:12,total:20,lat:34.7607,lng:127.6598},
@@ -1130,7 +1133,19 @@ const LOCKER_POINTS={
   boseong:[[34.7715,127.0800]],
   gangjin:[[34.6420,126.7680]],
 };
-const SAMPLE_FESTIVALS={
+const LOCKER_STDGCODES={
+  mokpo:'4611000000',
+  yeosu:'4613000000',
+  suncheon:'4615000000',
+  damyang:'4671000000',
+  boseong:'4678000000',
+  gangjin:'4681000000',
+};
+const lockerLiveByRegion={};
+const lockerLoadState={};
+const festivalLiveByRegion={};
+const festivalLoadState={};
+const FESTIVALS={
   yeosu:[
     {season:'봄·초여름',date:'2026.04.18 - 04.20',name:'해양 야경 페스타',place:'이순신광장 · 해양공원',copy:'밤바다 산책, 버스킹, 해상 포토스팟을 묶어 보기 좋은 시즌형 행사예요.'},
     {season:'가을',date:'2026.05.02 - 05.04',name:'섬·바다 문화주간',place:'오동도 · 엑스포 일대',copy:'섬 산책과 바다 전망 코스를 느긋하게 연결하기 좋은 분위기예요.'},
@@ -1159,115 +1174,6 @@ const SAMPLE_FESTIVALS={
 function listFromApi(items){
   if(Array.isArray(items))return items;
   return items?[items]:[];
-}
-
-function compactDate(value){
-  const digits=String(value||'').replace(/\D/g,'');
-  return digits.length===8?digits:'';
-}
-
-function buildFestivalDateRange(start,end){
-  const from=compactDate(start);
-  const to=compactDate(end);
-  if(!from&&!to)return'일정 미정';
-  const format=digits=>`${digits.slice(0,4)}.${digits.slice(4,6)}.${digits.slice(6,8)}`;
-  if(from&&to&&from!==to)return`${format(from)} - ${format(to)}`;
-  return format(from||to);
-}
-
-function getFestivalSeason(value){
-  const digits=compactDate(value);
-  const month=Number(digits.slice(4,6)||0);
-  if(month>=3&&month<=5)return'봄';
-  if(month>=6&&month<=8)return'여름';
-  if(month>=9&&month<=11)return'가을';
-  return'겨울';
-}
-
-function buildEmptyFestivalMap(){
-  return Object.keys(RG).reduce((acc,key)=>{
-    acc[key]=[];
-    return acc;
-  },{});
-}
-
-function getFestivalItems(key){
-  if(festivalMeta.source==='api'&&festivalD)return festivalD[key]||[];
-  return SAMPLE_FESTIVALS[key]||[];
-}
-
-function matchFestivalRegionKey(item){
-  return nm2k([item.title,item.eventplace,item.addr1,item.addr2].filter(Boolean).join(' '));
-}
-
-function parseFestivalItems(items,date){
-  const selected=compactDate(date);
-  const grouped=buildEmptyFestivalMap();
-  listFromApi(items).forEach(item=>{
-    const key=matchFestivalRegionKey(item);
-    if(!key)return;
-    const start=compactDate(item.eventstartdate);
-    const end=compactDate(item.eventenddate)||start;
-    if(selected&&end&&end<selected)return;
-    grouped[key].push({
-      season:getFestivalSeason(start||selected),
-      date:buildFestivalDateRange(start,end),
-      name:item.title||'행사 정보',
-      place:item.eventplace||item.addr1||RG[key].n,
-      copy:item.addr1&&item.eventplace&&item.addr1!==item.eventplace
-        ? item.addr1
-        : item.tel||item.addr2||'TourAPI 행사 정보',
-      _start:start||'99999999',
-      _end:end||'99999999',
-    });
-  });
-  Object.keys(grouped).forEach(key=>{
-    grouped[key].sort((a,b)=>{
-      const aPriority=selected&&a._start<=selected&&a._end>=selected?0:1;
-      const bPriority=selected&&b._start<=selected&&b._end>=selected?0:1;
-      if(aPriority!==bPriority)return aPriority-bPriority;
-      return a._start.localeCompare(b._start);
-    });
-    grouped[key]=grouped[key].map(({_start,_end,...item})=>item);
-  });
-  return grouped;
-}
-
-async function fetchFestivals(date,{silent=false}={}){
-  if(!API_KEY)return{source:'sample',byRegion:null};
-  const url=`/api/tour/festivals?serviceKey=${encodeURIComponent(API_KEY)}&eventDate=${compactDate(date)}&numOfRows=200`;
-  try{
-    const r=await fetch(url);
-    if(!r.ok)throw 0;
-    const d=await r.json();
-    const body=d?.response?.body;
-    const items=body?.items?.item;
-    if(!items&&Number(body?.totalCount||0)!==0)throw 0;
-    if(!silent)toast('✅ 축제 API 연동');
-    return {
-      source:'api',
-      byRegion:Number(body?.totalCount||0)===0?buildEmptyFestivalMap():parseFestivalItems(items,date),
-    };
-  }catch{
-    if(!silent)toast('⚠️ 축제 예시 일정 사용');
-    return{source:'sample',byRegion:null};
-  }
-}
-
-function applyFestivalData(result,date){
-  festivalMeta={source:result.source,requestedDate:date};
-  festivalD=result.byRegion;
-}
-
-async function refreshFestivals(date,options={}){
-  const result=await fetchFestivals(date,options);
-  applyFestivalData(result,date);
-  updateMapFrame(curRegion);
-  if(!crowdD.length&&!courseD.length){
-    renderLandingState();
-    return;
-  }
-  render();
 }
 
 function initKakaoMap(){
@@ -1396,11 +1302,116 @@ function showInfoOverlay(item,tag){
 }
 
 function getLockerPoint(regionKey,index){
-  const locker=LOCKERS[regionKey]?.[index];
+  const locker=getLockersForRegion(regionKey)?.[index];
   if(!locker)return null;
   const coords=LOCKER_POINTS[regionKey]?.[index];
   if(coords)return {...locker,lat:coords[0],lng:coords[1],e:'🧳',bg:'#ede9fe'};
   return {...locker,...RG[regionKey],e:'🧳',bg:'#ede9fe'};
+}
+
+function getLockersForRegion(key){
+  return lockerLiveByRegion[key]||LOCKERS[key]||[];
+}
+
+function getFestivalsForRegion(key){
+  return festivalLiveByRegion[key]||FESTIVALS[key]||[];
+}
+
+function hasKnownLockerAvailability(locker){
+  return Number.isFinite(locker?.avail);
+}
+
+function getLockerStatusMeta(locker){
+  const total=Number(locker?.total||0);
+  if(!hasKnownLockerAvailability(locker)||total<=0){
+    return {state:'unknown',label:'실시간 미제공',pct:0,fillColor:'#94a3b8'};
+  }
+  const avail=Math.max(0,Number(locker.avail));
+  const ratio=total?avail/total:0;
+  const pct=Math.round(ratio*100);
+  const state=avail===0?'full':ratio<0.35?'warn':'ok';
+  const label=state==='full'?'만석':state==='warn'?'혼잡':'여유';
+  const fillColor=state==='full'?'#ef4444':state==='warn'?'#d97706':'var(--leaf)';
+  return {state,label,pct,fillColor};
+}
+
+function getLockerCopy(locker){
+  if(!locker)return'';
+  if(hasKnownLockerAvailability(locker)){
+    return `${locker.addr} · 여유 ${locker.avail}/${locker.total}칸`;
+  }
+  return `${locker.addr} · 실시간 현황 미제공 · 총 ${locker.total||0}칸`;
+}
+
+function getFestivalQueryDate(){
+  const value=document.getElementById('tdate')?.value;
+  return (value||formatInputDate(new Date())).replace(/-/g,'');
+}
+
+function formatFestivalDateRange(start,end){
+  if(!start)return'일정 추후 공지';
+  const s=`${start.slice(0,4)}.${start.slice(4,6)}.${start.slice(6,8)}`;
+  if(!end||end===start)return s;
+  return `${s} - ${end.slice(4,6)}.${end.slice(6,8)}`;
+}
+
+function inferFestivalRegionKey(item){
+  const text=`${item.title||''} ${item.addr1||''} ${item.addr2||''}`.toLowerCase();
+  if(text.includes('여수'))return'yeosu';
+  if(text.includes('순천'))return'suncheon';
+  if(text.includes('담양'))return'damyang';
+  if(text.includes('목포'))return'mokpo';
+  if(text.includes('보성'))return'boseong';
+  if(text.includes('강진'))return'gangjin';
+  return null;
+}
+
+function mapFestivalItem(item){
+  const start=item.eventStartDate||'';
+  const end=item.eventEndDate||'';
+  return {
+    season:start?`${Number(start.slice(4,6))}월 추천`:'추천 축제',
+    date:formatFestivalDateRange(start,end),
+    name:item.title||'지역 축제',
+    place:[item.addr1,item.addr2].filter(Boolean).join(' '),
+    copy:item.tel?`문의 ${item.tel}`:'TourAPI 행사 정보',
+    lat:Number(item.mapy),
+    lng:Number(item.mapx),
+    source:item.source||'tourapi',
+  };
+}
+
+async function fetchFestivals(dateKey){
+  try{
+    const url=`/api/festivals?eventStartDate=${encodeURIComponent(dateKey)}&serviceKey=${encodeURIComponent(API_KEY)}`;
+    const r=await fetch(url);
+    if(!r.ok)throw new Error(`festival_http_${r.status}`);
+    const payload=await r.json();
+    const items=Array.isArray(payload?.items)?payload.items:[];
+    if(!items.length)throw new Error('festival_empty');
+    const grouped={};
+    items.forEach(raw=>{
+      const key=inferFestivalRegionKey(raw);
+      if(!key)return;
+      (grouped[key]||(grouped[key]=[])).push(mapFestivalItem(raw));
+    });
+    Object.keys(RG).forEach(key=>{
+      festivalLiveByRegion[key]=(grouped[key]&&grouped[key].length)?grouped[key].slice(0,3):(FESTIVALS[key]||[]);
+    });
+    festivalLoadState[dateKey]={source:'live',loadedAt:Date.now(),count:items.length,upstream:payload?.meta?.source||''};
+    return festivalLiveByRegion;
+  }catch{
+    Object.keys(RG).forEach(key=>{
+      festivalLiveByRegion[key]=FESTIVALS[key]||[];
+    });
+    festivalLoadState[dateKey]={source:'fallback',loadedAt:Date.now()};
+    return festivalLiveByRegion;
+  }
+}
+
+async function ensureFestivals(dateKey=getFestivalQueryDate()){
+  if(festivalLoadState[dateKey])return festivalLiveByRegion;
+  return fetchFestivals(dateKey);
 }
 
 function focusMapPoint(item,tag='보관함 위치'){
@@ -1597,7 +1608,6 @@ function syncDatePreset(){
 function applyDatePreset(kind){
   document.getElementById('tdate').value=formatInputDate(getPresetDate(kind));
   syncDatePreset();
-  refreshFestivals(document.getElementById('tdate').value,{silent:true});
 }
 
 function getCrowdEntry(key){
@@ -1605,34 +1615,15 @@ function getCrowdEntry(key){
 }
 
 function getLockerSummary(key){
-  const source=key===curRegion&&lockerD.length?lockerD:[];
-  return source.reduce((acc,item)=>{
+  return getLockersForRegion(key).reduce((acc,item)=>{
     acc.locations+=1;
     acc.total+=Number(item.total||0);
+    if(hasKnownLockerAvailability(item)){
+      acc.avail+=Number(item.avail||0);
+      acc.knownAvailCount+=1;
+    }
     return acc;
-  },{locations:0,total:0,known:source.length>0});
-}
-
-function showLockerOnMap(lat,lng,name){
-  if(!map||typeof lat!=='number'||typeof lng!=='number')return;
-  if(mapProvider==='kakao'){
-    map.setLevel(5);
-    map.panTo(makeLatLng(lat,lng));
-    showInfoOverlay({n:name,d:'Locker',lat,lng},'Locker');
-    return;
-  }
-  if(activeLeafletPopup){
-    map.closePopup(activeLeafletPopup);
-  }
-  map.flyTo([lat,lng],13,{duration:.8});
-  activeLeafletPopup=L.popup({
-    closeButton:false,
-    className:'map-popup-shell',
-    offset:[0,-18],
-  })
-    .setLatLng([lat,lng])
-    .setContent(makePopupContent(name,'','Locker'))
-    .openOn(map);
+  },{locations:0,avail:0,total:0,knownAvailCount:0});
 }
 
 function getKakaoMode(){
@@ -1642,199 +1633,17 @@ function getKakaoMode(){
   return'walk';
 }
 
-function getLockerEntryForSpot(spot){
-  if(!curRegion||!spot)return null;
-  const source=lockerD.length?lockerD:[];
-  if(!source.length)return null;
-  const exact=source.find(item=>item.n===spot.n);
-  if(exact)return exact;
-  if(spot.t!=='lock')return null;
-  const normalizedSpot=String(spot.n||'').replace(/\s*보관함$/,'').trim();
-  const byName=source.find(item=>String(item.n||'').replace(/\s*보관함$/,'').trim()===normalizedSpot);
-  if(byName)return byName;
-  if(typeof spot.lat!=='number'||typeof spot.lng!=='number')return source[0]||null;
-  return source.reduce((best,item)=>{
-    if(typeof item.lat!=='number'||typeof item.lng!=='number')return best;
-    if(!best)return item;
-    const bestDistance=(best.lat-spot.lat)**2+(best.lng-spot.lng)**2;
-    const itemDistance=(item.lat-spot.lat)**2+(item.lng-spot.lng)**2;
-    return itemDistance<bestDistance?item:best;
-  },null)||source[0]||null;
-}
-
-function getKakaoSpotLabel(spot){
-  const lockerEntry=getLockerEntryForSpot(spot);
-  if(!lockerEntry)return spot.n;
-  return lockerEntry.n
-    .replace(/\s*대형 보관함$/,'')
-    .replace(/\s*코인 보관함$/,'')
-    .replace(/\s*입구 보관함$/,'')
-    .replace(/\s*보관함$/,'')
-    .trim();
-}
-
 function buildKakaoPlaceUrl(spot){
-  const lockerEntry=getLockerEntryForSpot(spot);
-  const lat=typeof lockerEntry?.lat==='number'?lockerEntry.lat:spot.lat;
-  const lng=typeof lockerEntry?.lng==='number'?lockerEntry.lng:spot.lng;
-  const name=getKakaoSpotLabel(spot);
-  if(typeof lat==='number'&&typeof lng==='number'){
-    return `https://map.kakao.com/link/map/${encodeURIComponent(name)},${lat},${lng}`;
-  }
-  const regionName=curRegion&&RG[curRegion]?.n?`${RG[curRegion].n} `:'';
-  const query=lockerEntry
-    ? `${name} ${lockerEntry.addr}`.trim()
-    : `${regionName}${spot.n}`.trim();
-  return `https://map.kakao.com/?q=${encodeURIComponent(query)}`;
+  return `https://map.kakao.com/link/to/${encodeURIComponent(spot.n)},${spot.lat},${spot.lng}`;
 }
 
 function buildKakaoDirectionsUrl(spot,index){
-  const toLocker=getLockerEntryForSpot(spot);
-  const toLat=typeof toLocker?.lat==='number'?toLocker.lat:spot.lat;
-  const toLng=typeof toLocker?.lng==='number'?toLocker.lng:spot.lng;
-  const toName=getKakaoSpotLabel(spot);
   if(index===0){
-    return `https://map.kakao.com/link/to/${encodeURIComponent(toName)},${toLat},${toLng}`;
+    return buildKakaoPlaceUrl(spot);
   }
   const from=courseD[index-1];
-  const fromLocker=getLockerEntryForSpot(from);
-  const fromLat=typeof fromLocker?.lat==='number'?fromLocker.lat:from.lat;
-  const fromLng=typeof fromLocker?.lng==='number'?fromLocker.lng:from.lng;
-  const fromName=getKakaoSpotLabel(from);
-  return `https://map.kakao.com/link/from/${encodeURIComponent(fromName)},${fromLat},${fromLng}/to/${encodeURIComponent(toName)},${toLat},${toLng}`;
-}
-
-function getLockerApiItems(payload){
-  return listFromApi(
-    payload?.body?.item||
-    payload?.body?.items||
-    payload?.response?.body?.item||
-    payload?.response?.body?.items?.item||
-    []
-  );
-}
-
-function normalizeLockerName(item){
-  return item.stlckRprsPstnNm||item.stlckDtlPstnNm||'Locker';
-}
-
-function normalizeLockerAddress(item){
-  return item.rnAddr||item.lnmAddr||item.addr||'';
-}
-
-function normalizeLockerCount(value){
-  const number=Number(value);
-  return Number.isFinite(number)?number:0;
-}
-
-function getLockerKindBucket(name=''){
-  if(name.includes('소형'))return 'small';
-  if(name.includes('중형'))return 'medium';
-  if(name.includes('대형'))return 'large';
-  return 'other';
-}
-
-function summarizeLockerKinds(detailItems){
-  const grouped=new Map();
-  detailItems.forEach(item=>{
-    const lockerId=String(item.stlckId||'');
-    if(!lockerId)return;
-    const current=grouped.get(lockerId)||{small:0,medium:0,large:0,other:0,total:0};
-    const bucket=getLockerKindBucket(String(item.stlckKndNm||''));
-    current[bucket]+=1;
-    current.total+=1;
-    grouped.set(lockerId,current);
-  });
-  return grouped;
-}
-
-function formatLockerTypeSummary(item){
-  const parts=[];
-  if(item.small)parts.push(`소형 ${item.small}칸`);
-  if(item.medium)parts.push(`중형 ${item.medium}칸`);
-  if(item.large)parts.push(`대형 ${item.large}칸`);
-  if(item.other)parts.push(`기타 ${item.other}칸`);
-  return parts.join(' · ');
-}
-
-function getLockerPublicUrl(path){
-  if(path.includes('/detail'))return LOCKER_DETAIL_PUBLIC_URL;
-  return LOCKER_INFO_PUBLIC_URL;
-}
-
-async function fetchLockerEndpoint(path,stdgCd,allowNoData=false){
-  const query=`stdgCd=${encodeURIComponent(stdgCd)}&numOfRows=200&pageNo=1&type=JSON`;
-  const targets=[
-    `${path}?${query}`,
-    `${getLockerPublicUrl(path)}?serviceKey=${encodeURIComponent(LOCKER_API_KEY)}&${query}`,
-  ];
-  let lastError=null;
-  for(const target of targets){
-    try{
-      const response=await fetch(target,{mode:'cors',cache:'no-store'});
-      const payload=await response.json();
-      if(!response.ok){
-        throw new Error(payload?.detail||payload?.error||'locker_api_error');
-      }
-      const header=payload?.header||payload?.response?.header;
-      if(header?.resultCode&&!['00','K0'].includes(header.resultCode)){
-        if(allowNoData&&header.resultCode==='K3')return payload;
-        throw new Error(header.resultMsg||header.resultCode);
-      }
-      return payload;
-    }catch(error){
-      lastError=error;
-    }
-  }
-  throw lastError||new Error('locker_api_error');
-}
-
-function normalizeLockerData(infoItems,detailItems=[]){
-  const detailMap=summarizeLockerKinds(detailItems);
-  return infoItems.map(item=>{
-    const lockerId=String(item.stlckId||'');
-    const detail=detailMap.get(lockerId)||{small:0,medium:0,large:0,other:0,total:0};
-    const total=detail.total||normalizeLockerCount(item.stlckCnt);
-    return {
-      n:normalizeLockerName(item),
-      addr:normalizeLockerAddress(item),
-      total,
-      lat:Number(item.lat),
-      lng:Number(item.lot),
-      stlckId:lockerId,
-      small:detail.small,
-      medium:detail.medium,
-      large:detail.large,
-      other:detail.other,
-      typeSummary:formatLockerTypeSummary(detail),
-      source:'api',
-    };
-  }).filter(item=>item.n&&Number.isFinite(item.lat)&&Number.isFinite(item.lng));
-}
-
-async function loadLockerData(regionKey){
-  const requestId=++lockerFetchId;
-  const stdgCd=REGION_STDG_CODES[regionKey];
-  if(!stdgCd){
-    lockerD=[];
-    return lockerD;
-  }
-  let nextLockerData=[];
-  try{
-    const [infoPayload,detailPayload]=await Promise.all([
-      fetchLockerEndpoint('/api/locker/info',stdgCd),
-      fetchLockerEndpoint('/api/locker/detail',stdgCd,true),
-    ]);
-    const infoItems=getLockerApiItems(infoPayload);
-    const detailItems=getLockerApiItems(detailPayload);
-    nextLockerData=normalizeLockerData(infoItems,detailItems);
-  }catch(error){
-    console.error('locker load failed',regionKey,error);
-    nextLockerData=[];
-  }
-  if(requestId!==lockerFetchId)return lockerD;
-  lockerD=nextLockerData;
-  return lockerD;
+  const mode=getKakaoMode();
+  return `https://map.kakao.com/link/by/${mode}/${encodeURIComponent(from.n)},${from.lat},${from.lng}/${encodeURIComponent(spot.n)},${spot.lat},${spot.lng}`;
 }
 
 function getBestRegionKey(){
@@ -1852,129 +1661,90 @@ function updateMapFrame(key=curRegion){
     title.textContent='전남 전역 미리보기';
     sub.textContent='지도를 눌러 지역 분위기를 먼저 보고, 아래 카드에서 축제와 보관함 정보를 이어서 확인해보세요.';
     badge.textContent=`${Object.keys(RG).length}곳`;
-    badgeLabel.textContent='';
+    badgeLabel.textContent='추천 지역';
     return;
   }
   const region=RG[key];
-  const festivals=getFestivalItems(key);
+  const festivals=getFestivalsForRegion(key);
   const lockers=getLockerSummary(key);
   title.textContent=`${region.n} 지도 프리뷰`;
   sub.textContent=`${region.sub} 흐름을 먼저 보고, 아래에서 대표 축제 ${festivals.length}건과 보관함 ${lockers.locations}곳을 이어서 확인해보세요.`;
-  badge.textContent=`${lockers.avail}/${lockers.total||0}`;
-  badgeLabel.textContent='보관함 위치';
+  badge.textContent=lockers.knownAvailCount?`${lockers.avail}/${lockers.total||0}`:`${lockers.total||0}칸`;
+  badgeLabel.textContent=lockers.knownAvailCount?'보관함 여유':'보관함 규모';
 }
 
 function renderFestivalSection(key,limit=2){
-  const items=getFestivalItems(key).slice(0,limit);
+  const items=getFestivalsForRegion(key).slice(0,limit);
   if(!items.length){
-    return `<div class="empty" style="padding-top:18px"><div class="empty-s">선택한 날짜 기준 축제 정보를 준비 중이에요.</div></div>`;
+    return `<div class="info-panel"><div class="empty" style="padding-top:18px"><div class="empty-s">대표 축제 정보를 준비 중이에요.</div></div></div>`;
   }
-  const note=festivalMeta.source==='api'
-    ? `TourAPI 행사정보 · ${formatDateLabel(festivalMeta.requestedDate||formatInputDate(new Date()))} 기준`
-    : 'API 연동 전 예시 일정이에요';
-  const foot=festivalMeta.source==='api'
-    ? '선택한 날짜와 겹치거나 그 이후에 이어지는 행사만 추려서 보여줘요.'
-    : '축제 API가 실패하면 이 예시 일정이 fallback으로 표시돼요.';
   return `<div class="info-panel">
     <div class="info-panel-head">
       <div class="info-panel-title">다가오는 축제 일정</div>
-      <div class="info-panel-note">${note}</div>
+      <div class="info-panel-note">API 연동 전 예시 일정이에요</div>
     </div>
     <div class="festival-schedule">${items.map(item=>`
       <div class="festival-row">
         <div class="festival-date">${item.date||item.season}</div>
         <div>
           <div class="festival-name">${item.name}</div>
-          <div class="festival-meta">📍 ${[item.place,item.copy].filter(Boolean).join(' · ')}</div>
+          <div class="festival-meta">📍 ${item.place} · ${item.copy}</div>
         </div>
         <div class="festival-chip">${item.season}</div>
       </div>
     `).join('')}</div>
-    <div class="festival-foot">${foot}</div>
+    <div class="festival-foot">실제 배포 단계에서는 축제 API 데이터로 자동 갱신할 예정입니다.</div>
   </div>`;
 }
 
 function renderLockerPreviewSection(regionKey,items){
   if(!items.length){
-    return `<div class="empty" style="padding-top:18px"><div class="empty-s">코스를 찾으면 지역 보관함 위치를 보여드려요.</div></div>`;
+    return `<div class="info-panel locker-feature"><div class="empty" style="padding-top:18px"><div class="empty-s">코스를 찾으면 지역 보관함 여유 현황을 보여드려요.</div></div></div>`;
   }
-  const totalSlots=items.reduce((sum,item)=>sum+item.total,0);
-  const freeSlots=items.reduce((sum,item)=>sum+item.avail,0);
-  const crowdedCount=items.filter(item=>item.avail===0).length;
+  const totalSlots=items.reduce((sum,item)=>sum+Number(item.total||0),0);
+  const freeSlots=items.reduce((sum,item)=>sum+(hasKnownLockerAvailability(item)?Number(item.avail||0):0),0);
+  const crowdedCount=items.filter(item=>hasKnownLockerAvailability(item)&&Number(item.avail)===0).length;
+  const knownAvailCount=items.filter(item=>hasKnownLockerAvailability(item)).length;
   return `<div class="info-panel locker-feature">
     <div class="info-panel-head">
       <div class="info-panel-title">짐보관 메인 보드</div>
-      <div class="info-panel-note">이동 전에 보관함 위치와 규모를 먼저 확인해요</div>
+      <div class="info-panel-note">이동 전에 여유 칸과 혼잡도를 먼저 보고 출발해요</div>
     </div>
     <div class="locker-hero">
       <div class="locker-hero-copy">
         <div class="locker-hero-kicker">Core Feature · Locker</div>
         <div class="locker-hero-title">짐부터 가볍게 맡기고 코스를 움직일 수 있게</div>
-        <div class="locker-hero-text">역, 터미널, 관광안내소 기준으로 보관 거점과 전체 칸 수를 확인할 수 있게 구성했어요.</div>
+        <div class="locker-hero-text">역, 터미널, 관광안내소 기준으로 보관 거점을 먼저 보여주고 여유 칸까지 한 번에 확인할 수 있게 구성했어요.</div>
       </div>
       <div class="locker-hero-stats">
         <div class="locker-stat">
-          <div class="locker-stat-label">전체 보관 칸</div>
-          <div class="locker-stat-value">${freeSlots}</div>
-          <div class="locker-stat-copy">총 ${totalSlots}칸 중 바로 이용 가능한 공간</div>
+          <div class="locker-stat-label">현재 여유 칸</div>
+          <div class="locker-stat-value">${knownAvailCount?freeSlots:'-'}</div>
+          <div class="locker-stat-copy">${knownAvailCount?`총 ${totalSlots}칸 중 바로 이용 가능한 공간`:`실시간 현황이 없어 총 ${totalSlots}칸 규모만 제공 중`}</div>
         </div>
         <div class="locker-stat">
           <div class="locker-stat-label">혼잡 지점</div>
           <div class="locker-stat-value">${crowdedCount}</div>
-          <div class="locker-stat-copy">위치와 규모를 확인할 수 있는 보관 지점</div>
+          <div class="locker-stat-copy">미리 피해서 동선을 짜야 하는 만석 지점</div>
         </div>
       </div>
     </div>
     <div class="locker-feature-list">${items.map((item,index)=>{
-      const ratio=item.total?item.avail/item.total:0;
-      const pct=item.total?Math.round(ratio*100):0;
-      const state=item.avail===0?'full':ratio<0.35?'warn':'ok';
-      const label='위치';
-      const fillColor=state==='full'?'#ef4444':state==='warn'?'#d97706':'var(--leaf)';
+      const {state,label,pct,fillColor}=getLockerStatusMeta(item);
+      const cap=hasKnownLockerAvailability(item)?`${item.avail}/${item.total}칸 이용 가능`:`실시간 현황 미제공 · 총 ${item.total||0}칸`;
       return `<button class="locker-feature-card" type="button" onclick="focusLocker(${index},'${regionKey}')">
         <div class="locker-feature-head">
           <div>
             <span class="locker-preview-name">${item.n}</span>
             <span class="locker-preview-sub">${item.addr}</span>
-            <span class="locker-preview-cap">${item.avail}/${item.total}칸 이용 가능</span>
+            <span class="locker-preview-cap">${cap}</span>
           </div>
           <span class="locker-preview-state ${state}">${label}</span>
         </div>
         <div class="locker-preview-meter"><div class="locker-preview-fill" style="width:${pct}%;background:${fillColor}"></div></div>
       </button>`;
     }).join('')}</div>
-    <div class="locker-preview-hint">지역별 보관함 위치 데이터로 표시됩니다.</div>
-  </div>`;
-}
-
-function renderLockerPreviewSection(regionKey,items){
-  if(!items.length){
-    return '';
-  }
-  const totalSlots=items.reduce((sum,item)=>sum+Number(item.total||0),0);
-  return `<div class="info-panel locker-feature">
-    <div class="info-panel-head">
-      <div class="info-panel-title">근처 보관함</div>
-    </div>
-    <div class="locker-feature-list">${items.map((item,index)=>{
-      const pct=100;
-      const fillColor='#94a3b8';
-      const copy=`총 ${item.total||0}칸 운영`;
-      const detailCopy=item.typeSummary?`<span class="locker-preview-cap">${item.typeSummary}</span>`:'';
-      return `<button class="locker-feature-card" type="button" onclick="focusLocker(${index},'${regionKey}')">
-        <div class="locker-feature-head">
-          <div>
-            <span class="locker-preview-name">${item.n}</span>
-            <span class="locker-preview-sub">${item.addr}</span>
-            <span class="locker-preview-cap">${copy}</span>
-            ${detailCopy}
-          </div>
-          <span class="locker-preview-state unknown">위치</span>
-        </div>
-        <div class="locker-preview-meter"><div class="locker-preview-fill" style="width:${pct}%;background:${fillColor}"></div></div>
-      </button>`;
-    }).join('')}</div>
-    <div class="locker-preview-hint">총 ${totalSlots}칸 기준으로 표시합니다.</div>
+    <div class="locker-preview-hint">${knownAvailCount?'실시간 현황이 제공되는 거점은 여유 칸 수를 우선 반영합니다.':'현재 지역은 공공데이터 기본/상세 정보만 제공되어 규모 중심으로 안내합니다.'}</div>
   </div>`;
 }
 
@@ -1982,11 +1752,46 @@ function renderSideRail(key,items){
   const target=document.getElementById('sideRail');
   if(!target)return;
   const activeKey=key&&RG[key]?key:getBestRegionKey();
-  const sourceItems=(items&&items.length)?items:[];
+  const sourceItems=(items&&items.length)?items:getLockersForRegion(activeKey);
   target.innerHTML=`
     ${renderLockerPreviewSection(activeKey,sourceItems)}
     ${renderFestivalSection(activeKey,3)}
   `;
+}
+
+function renderRegionPreviewPanel(){
+  const key=curRegion&&RG[curRegion]?curRegion:getBestRegionKey();
+  const featured=RG[key];
+  return `
+    <div class="preview-panel-shell">
+      <div class="preview-panel-head">
+        <div>
+          <div class="preview-panel-title">지역 미리보기</div>
+          <div class="preview-panel-copy">${featured.n}를 기준으로 주변 지역 분위기와 혼잡 흐름을 빠르게 훑어볼 수 있어요. 카드를 누르면 지도와 함께 강조됩니다.</div>
+        </div>
+        <div class="preview-panel-note">지도 아래에서 바로 비교</div>
+      </div>
+      <div class="landing-grid">
+        ${Object.entries(RG).map(([rk,ri])=>{
+          const crowd=getCrowdEntry(rk);
+          const locker=getLockerSummary(rk);
+          return `<button class="region-card ${rk===key?'on':''}" onclick="previewRegion('${rk}')">
+            <div class="region-card-head">
+              <div>
+                <div class="region-card-name">${ri.n}</div>
+                <div class="region-card-sub">${ri.sub}</div>
+              </div>
+              <div class="region-card-emoji" style="background:${ri.bg}">${ri.e}</div>
+            </div>
+            <div class="region-card-meta">
+              <span class="region-card-stat">${lvLbl(crowd.level)}</span>
+              <span class="region-card-stat">${Number(crowd.visitors||0).toLocaleString()}명 예상</span>
+              <span class="region-card-stat">보관함 ${locker.locations}곳</span>
+            </div>
+          </button>`;
+        }).join('')}
+      </div>
+    </div>`;
 }
 
 function setActiveTab(name){
@@ -2016,22 +1821,21 @@ function updatePeek(key=curRegion){
   actions.innerHTML=`
     <span class="peek-chip">${lvLbl(crowd.level)} · ${Number(crowd.visitors||0).toLocaleString()}명</span>
     <button class="peek-chip peek-chip-btn" onclick="event.stopPropagation();${crowdD.length?'openLockerTab()':'openSP()'}">
-      ${crowdD.length?`보관함 위치 ${locker.locations}곳`:'이 지역으로 검색하기'}
+      ${crowdD.length?(locker.knownAvailCount?`보관함 ${locker.locations}곳 · 여유 ${locker.avail}칸`:`보관함 ${locker.locations}곳 · 총 ${locker.total}칸`):'이 지역으로 검색하기'}
     </button>`;
 }
 
 function renderLandingState(){
-  const isOverview=!(curRegion&&RG[curRegion]);
-  const key=isOverview?getBestRegionKey():curRegion;
+  const key=curRegion&&RG[curRegion]?curRegion:getBestRegionKey();
   const featured=RG[key];
-  renderSideRail(key,!isOverview&&key===curRegion?lockerD:[]);
+  renderSideRail(key,getLockersForRegion(key));
   document.getElementById('sheetBody').innerHTML=`
     <div class="landing">
       <div class="landing-hero">
         <div class="landing-hero-shell">
           <div class="landing-hero-copy">
             <div class="landing-eyebrow">한적한 여행 추천</div>
-            <div class="landing-title">복잡한 인기 코스 대신 더 느긋한 전남을 골라보세요</div>
+            <div class="landing-title">짐보관부터 챙기고, 복잡한 인기 코스 대신 더 여유로운 전남을 골라보세요</div>
             <div class="landing-copy">${featured.n}부터 둘러보면 ${featured.sub} 분위기를 빠르게 감 잡을 수 있어요. 날짜를 정하면 혼잡도 기반 코스와 함께 보관 거점까지 바로 이어서 확인할 수 있습니다.</div>
             <div class="landing-cta-row">
               <button class="landing-btn primary" onclick="openSP()">날짜 선택하고 코스 찾기</button>
@@ -2087,18 +1891,14 @@ async function runSearch(){
 
   document.getElementById('spDate').textContent=formatDateLabel(date);
   setLoading();
-  const [crowdResult,festivalResult]=await Promise.all([
-    fetchCrowd(date),
-    fetchFestivals(date),
-  ]);
-  crowdD=crowdResult;
-  applyFestivalData(festivalResult,date);
+  crowdD=await fetchCrowd(date);
+  await ensureFestivals(date.replace(/-/g,''));
 
   const sel=document.getElementById('rsel').value;
   const rk=sel||crowdD.find(r=>r.level==='low')?.key||crowdD[0]?.key;
   curRegion=rk;
-  courseD=(COURSES[rk]||[]).filter(item=>item.t!=='lock');
-  await loadLockerData(rk);
+  courseD=COURSES[rk]||[];
+  lockerD=await ensureRegionLockers(rk);
 
   document.getElementById('spMain').innerHTML=`<b>${RG[rk].n}</b> · ${RG[rk].sub}`;
   document.getElementById('tabs').style.display='flex';
@@ -2148,6 +1948,44 @@ function mockCrowd(){
   return Object.keys(RG).map(key=>({key,...RG[key],...MC[key]}));
 }
 
+async function fetchLockers(regionKey){
+  const stdgCd=LOCKER_STDGCODES[regionKey];
+  if(!stdgCd)return getLockersForRegion(regionKey);
+  try{
+    const url=`/api/lockers?stdgCd=${encodeURIComponent(stdgCd)}&serviceKey=${encodeURIComponent(API_KEY)}`;
+    const r=await fetch(url);
+    if(!r.ok)throw new Error(`locker_http_${r.status}`);
+    const payload=await r.json();
+    const items=Array.isArray(payload?.items)?payload.items:[];
+    if(!items.length)throw new Error('locker_empty');
+    lockerLiveByRegion[regionKey]=items.map((item,index)=>{
+      const fallback=LOCKERS[regionKey]?.[index]||{};
+      const lat=Number(item.lat);
+      const lng=Number(item.lng);
+      return {
+        ...fallback,
+        ...item,
+        avail:Number.isFinite(Number(item.avail))?Number(item.avail):null,
+        total:Number(item.total||fallback.total||0),
+        lat:Number.isFinite(lat)?lat:Number(fallback.lat),
+        lng:Number.isFinite(lng)?lng:Number(fallback.lng),
+      };
+    });
+    lockerLoadState[regionKey]={source:'live',loadedAt:Date.now(),meta:payload.meta||{}};
+    return lockerLiveByRegion[regionKey];
+  }catch{
+    lockerLiveByRegion[regionKey]=LOCKERS[regionKey]||[];
+    lockerLoadState[regionKey]={source:'fallback',loadedAt:Date.now()};
+    return lockerLiveByRegion[regionKey];
+  }
+}
+
+async function ensureRegionLockers(regionKey){
+  if(!regionKey||!RG[regionKey])return [];
+  if(lockerLoadState[regionKey])return getLockersForRegion(regionKey);
+  return fetchLockers(regionKey);
+}
+
 function nm2k(nm){
   if(nm.includes('여수'))return'yeosu';
   if(nm.includes('순천'))return'suncheon';
@@ -2188,7 +2026,7 @@ function renderCourse(){
   <button class="access-card" onclick="openLockerTab()">
     <div>
       <div class="access-kicker">보관함 빠른 이동</div>
-      <div class="access-title">${locker.locations}개 보관함 · 총 ${locker.total}칸</div>
+      <div class="access-title">${locker.knownAvailCount?`${locker.locations}개 보관함 · 여유 ${locker.avail}/${locker.total}칸`:`${locker.locations}개 보관함 · 총 ${locker.total}칸 규모`}</div>
       <div class="access-copy">지금 가장 먼저 확인해야 할 기능이에요. 짐을 어디에 맡길지 정한 뒤 더 가벼운 동선으로 이동해보세요.</div>
     </div>
     <div class="access-arrow">›</div>
@@ -2259,17 +2097,19 @@ function renderCrowd(){
 function renderLocker(){
   if(!lockerD.length)return`<div class="empty"><div class="empty-ico">🧳</div><div class="empty-t">보관함 정보 없음</div></div>`;
   return `<div class="locker-list">${lockerD.map((l,index)=>{
-    const pct=l.total?Math.round(l.avail/l.total*100):0;
+    const {state,pct,fillColor}=getLockerStatusMeta(l);
+    const tone=state==='ok'?'var(--leaf)':state==='unknown'?'#64748b':'#ef4444';
+    const copy=hasKnownLockerAvailability(l)?`여유 ${l.avail}/${l.total}칸 (${pct}% 남음)`:`실시간 현황 미제공 · 총 ${l.total||0}칸`;
     return `<button class="locker-card" type="button" onclick="focusLocker(${index})">
       <div class="locker-ico">🧳</div>
       <div style="flex:1">
         <div class="lk-name">${l.n}</div>
         <div class="lk-addr">📍 ${l.addr}</div>
         <div class="lk-row">
-          <div class="lk-dot ${l.avail>0?'ok':'full'}"></div>
-          <span class="lk-txt" style="color:var(--ink2)">총 ${l.total}칸 운영</span>
+          <div class="lk-dot ${state==='ok'?'ok':state==='unknown'?'warn':'full'}"></div>
+          <span class="lk-txt" style="color:${tone}">${copy}</span>
         </div>
-        <div class="lk-prog"><div class="lk-prog-fill" style="width:${pct}%;background:${l.avail>0?'var(--leaf)':'#ef4444'}"></div></div>
+        <div class="lk-prog"><div class="lk-prog-fill" style="width:${pct}%;background:${fillColor}"></div></div>
       </div>
     </button>`;
   }).join('')}</div>`;
@@ -2315,13 +2155,20 @@ function onPill(el,key){
 function setPillOn(key){
   const pills=document.querySelectorAll('.eco-pill');
   pills.forEach(p=>p.classList.remove('on'));
-  pills[0]?.classList.add('on');
+  if(!key){
+    pills[0]?.classList.add('on');
+    return;
+  }
+  pills.forEach(p=>{
+    if(p.textContent.trim()===RG[key]?.n)p.classList.add('on');
+  });
 }
 
 async function previewRegion(key){
   curRegion=key;
   document.getElementById('rsel').value=key;
-  await loadLockerData(key);
+  await ensureFestivals();
+  lockerD=await ensureRegionLockers(key);
   setPillOn(key);
   updatePeek(key);
   updateMapFrame(key);
@@ -2355,14 +2202,13 @@ function focusSpot(index){
 
 function focusLocker(index,key=curRegion){
   const regionKey=key&&RG[key]?key:curRegion;
-  const source=regionKey===curRegion&&lockerD.length?lockerD:(LOCKERS[regionKey]||[]);
-  const locker=source[index];
+  const locker=getLockersForRegion(regionKey)[index];
   if(!locker||locker.lat==null||locker.lng==null)return;
-  const copy=`${locker.addr} · 총 ${locker.total||0}칸`;
+  const copy=getLockerCopy(locker);
   if(mapProvider==='kakao'){
     map.setLevel(4);
     map.panTo(makeLatLng(locker.lat,locker.lng));
-    showInfoOverlay({n:locker.n,d:copy,lat:locker.lat,lng:locker.lng},'Locker');
+    showInfoOverlay({n:locker.n,d:copy,lat:locker.lat,lng:locker.lng},'보관함 위치');
   }else{
     map.flyTo([locker.lat,locker.lng],14,{duration:.8});
     L.popup({
@@ -2371,7 +2217,7 @@ function focusLocker(index,key=curRegion){
       offset:[0,-18],
     })
       .setLatLng([locker.lat,locker.lng])
-      .setContent(makePopupContent(locker.n,copy,'Locker'))
+      .setContent(makePopupContent(locker.n,copy,'보관함 위치'))
       .openOn(map);
   }
   toast(`📍 ${locker.n} 위치를 지도에서 열었어요`);
@@ -2379,8 +2225,8 @@ function focusLocker(index,key=curRegion){
 
 async function jumpR(key){
   curRegion=key;
-  courseD=(COURSES[key]||[]).filter(item=>item.t!=='lock');
-  await loadLockerData(key);
+  courseD=COURSES[key]||[];
+  lockerD=await ensureRegionLockers(key);
   document.getElementById('spMain').innerHTML=`<b>${RG[key].n}</b> · ${RG[key].sub}`;
   updatePeek(key);
   updateMapFrame(key);
@@ -2421,6 +2267,10 @@ function saveKey(){
   API_KEY=k||DEFAULT_API_KEY;
   if(k)localStorage.setItem('tapi',k);
   else localStorage.removeItem('tapi');
+  Object.keys(lockerLiveByRegion).forEach(key=>delete lockerLiveByRegion[key]);
+  Object.keys(lockerLoadState).forEach(key=>delete lockerLoadState[key]);
+  Object.keys(festivalLiveByRegion).forEach(key=>delete festivalLiveByRegion[key]);
+  Object.keys(festivalLoadState).forEach(key=>delete festivalLoadState[key]);
   closeModal();
   toast('✅ Tour API 설정이 저장됐습니다');
 }
@@ -2445,121 +2295,16 @@ document.addEventListener('touchmove',e=>{
 },{passive:true});
 document.addEventListener('touchend',()=>{drag.on=false});
 
-function updateMapFrame(key=curRegion){
-  const title=document.getElementById('mapFrameTitle');
-  const sub=document.getElementById('mapFrameSub');
-  const badge=document.getElementById('mapFrameBadge');
-  const badgeLabel=document.getElementById('mapFrameBadgeLabel');
-  const badgeWrap=badge?.closest('.map-frame-badge');
-  if(!key||!RG[key]){
-    title.textContent='전남 지역 미리보기';
-    sub.textContent='지도를 눌러 지역 분위기를 먼저 보고, 아래 카드에서 축제와 코스 정보를 확인해보세요.';
-    if(badgeWrap)badgeWrap.style.display='none';
-    if(badge)badge.textContent='';
-    if(badgeLabel)badgeLabel.textContent='';
-    return;
-  }
-  const region=RG[key];
-  const festivals=getFestivalItems(key);
-  const lockers=getLockerSummary(key);
-  title.textContent=`${region.n} 지도 프리뷰`;
-  sub.textContent=lockers.locations
-    ? `${region.sub} 흐름을 먼저 보고, 대표 축제 ${festivals.length}건과 근처 보관함 위치 ${lockers.locations}곳을 확인해보세요.`
-    : `${region.sub} 흐름을 먼저 보고, 대표 축제 ${festivals.length}건과 코스 분위기를 확인해보세요.`;
-  if(badgeWrap)badgeWrap.style.display='none';
-  if(badge)badge.textContent='';
-  if(badgeLabel)badgeLabel.textContent='';
-}
-
-function updatePeek(key=curRegion){
-  const actions=document.getElementById('peekActions');
-  if(!key||!RG[key]){
-    document.getElementById('peekIcon').textContent='🌿';
-    document.getElementById('peekTitle').textContent='전남 여행을 계획해보세요';
-    document.getElementById('peekMeta').innerHTML='지역 미리보기와 날짜 선택으로 한적한 코스를 바로 찾을 수 있어요';
-    actions.innerHTML=`<button class="peek-chip peek-chip-btn" onclick="event.stopPropagation();openSP()">날짜 고르고 시작하기</button>`;
-    return;
-  }
-  const ri=RG[key];
-  const crowd=getCrowdEntry(key);
-  const locker=getLockerSummary(key);
-  document.getElementById('peekIcon').textContent=ri.e;
-  document.getElementById('peekTitle').textContent=crowdD.length?`${ri.n} 추천 코스`:`${ri.n} 미리보기`;
-  document.getElementById('peekMeta').innerHTML=crowdD.length
-    ? `혼잡도 <b>${lvLbl(crowd.level)}</b> · ${courseD.length}개 코스 · ${ri.sub}`
-    : `${ri.sub} · ${ri.theme} 중심 · 미리보기 후 바로 검색 가능`;
-  const lockerChip=locker.locations
-    ? `<span class="peek-chip" style="background:rgba(125,201,111,.2);color:var(--moss)">보관함 위치 ${locker.locations}곳</span>`
-    : '';
-  actions.innerHTML=`<span class="peek-chip">${lvLbl(crowd.level)} · ${Number(crowd.visitors||0).toLocaleString()}명</span>${lockerChip}`;
-}
-
-function renderLandingState(){
-  const isOverview=!(curRegion&&RG[curRegion]);
-  const key=isOverview?getBestRegionKey():curRegion;
-  const featured=RG[key];
-  const locker=getLockerSummary(key);
-  const lockerCopy=locker.locations
-    ? `근처 보관함 ${locker.locations}곳의 위치와 전체 칸 수를 함께 확인할 수 있어요.`
-    : '지역 분위기와 축제 흐름을 먼저 보고 이동 동선을 골라보세요.';
-  renderSideRail(key,!isOverview&&key===curRegion?lockerD:[]);
-  document.getElementById('sheetBody').innerHTML=`
-    <div class="landing">
-      <div class="landing-hero">
-        <div class="landing-hero-shell">
-          <div class="landing-hero-copy">
-            <div class="landing-eyebrow">${isOverview?'전남':'추천 지역 미리보기'}</div>
-            <div class="landing-title">${isOverview?'전남 여행을 계획해보세요':`${featured.n}부터 가볍게 둘러보는 전남 여행`}</div>
-            <div class="landing-copy">${isOverview?'지역 미리보기와 날짜 선택으로 시작하면 코스를 바로 찾을 수 있어요.':`${featured.n}의 ${featured.sub} 분위기를 먼저 보고, 날짜를 고르면 혼잡도 기반 코스를 바로 이어서 볼 수 있어요. ${lockerCopy}`}</div>
-            <div class="landing-cta-row">
-              <button class="landing-btn primary" onclick="openSP()">날짜 선택하고 코스 찾기</button>
-              <button class="landing-btn secondary" onclick="previewRegion('${key}')">${featured.n} 먼저 보기</button>
-            </div>
-          </div>
-          <div class="landing-hero-art">
-            <img src="assets/eco-mascot.png" alt="전남 ECO 여행 마스코트">
-          </div>
-        </div>
-      </div>
-      <div class="landing-section-title">
-        <span>지역 미리보기</span>
-        <span>카드를 누르면 지도와 함께 강조됩니다</span>
-      </div>
-      <div class="landing-grid">
-        ${Object.entries(RG).map(([rk,ri])=>{
-          const crowd=getCrowdEntry(rk);
-          return `<button class="region-card ${!isOverview&&rk===key?'on':''}" onclick="previewRegion('${rk}')">
-            <div class="region-card-head">
-              <div>
-                <div class="region-card-name">${ri.n}</div>
-                <div class="region-card-sub">${ri.sub}</div>
-              </div>
-              <div class="region-card-emoji" style="background:${ri.bg}">${ri.e}</div>
-            </div>
-            <div class="region-card-meta">
-              <span class="region-card-stat">${lvLbl(crowd.level)}</span>
-              <span class="region-card-stat">${Number(crowd.visitors||0).toLocaleString()}명 예상</span>
-            </div>
-          </button>`;
-        }).join('')}
-      </div>
-    </div>`;
-}
-
 document.addEventListener('DOMContentLoaded',()=>{
   const boot=()=>{
     initMap();
     document.getElementById('tdate').value=formatInputDate(new Date());
-    document.getElementById('tdate').addEventListener('change',e=>{
-      syncDatePreset();
-      refreshFestivals(e.target.value,{silent:true});
-    });
+    document.getElementById('tdate').addEventListener('change',syncDatePreset);
     syncDatePreset();
     updatePeek();
     renderLandingState();
     setPillOn(null);
     window.addEventListener('resize',refreshMapLayout);
-    refreshFestivals(document.getElementById('tdate').value,{silent:true});
     if(window.innerWidth>=768){
       document.getElementById('sheet').className='sheet';
       document.getElementById('sheet').style.transform='translateY(0)';
