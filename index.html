@@ -1255,12 +1255,10 @@ const FESTIVALS={
     {season:'여름',date:'2026.05.16 - 05.17',name:'야경 뮤직 나이트',place:'평화광장 해변',copy:'낮에는 역사 코스, 밤에는 공연과 야경으로 연결하기 좋은 구성이에요.'},
   ],
   boseong:[
-    {season:'봄',date:'2026.04.17 - 04.20',name:'녹차 시즌 페스티벌',place:'보성차밭 일대',copy:'차밭 풍경이 가장 살아나는 시기라 사진과 산책 만족도가 높아요.'},
-    {season:'여름',date:'2026.05.08 - 05.10',name:'해안 힐링 위크',place:'율포 해변',copy:'바다와 차밭을 함께 묶어 여유로운 하루 코스로 만들기 좋아요.'},
+    {season:'축제정보',date:'2026.05.01 - 05.05',name:'보성다향대축제',place:'한국차문화공원 및 보성차밭 일원',copy:'무료로 열리는 대표 차 문화 축제로, 차밭 풍경과 전통문화 프로그램을 함께 즐기기 좋아요.'},
   ],
   gangjin:[
-    {season:'봄',date:'2026.04.23 - 04.26',name:'청자 문화 주간',place:'청자박물관 일대',copy:'도예 체험, 전시, 로컬 마켓이 함께 어우러지는 대표 문화 시즌이에요.'},
-    {season:'가을',date:'2026.05.14 - 05.16',name:'역사 산책 페스티벌',place:'다산초당 · 가우도',copy:'역사 명소와 해안 걷기를 연결해 묵직한 분위기의 여행을 만들기 좋아요.'},
+    {season:'행사종료',date:'2026.04.17. (금) ~ 2026.04.19. (일)',name:'강진 전라병영성축제',place:'전라병영성 일원',copy:'축제 > 전통문화축제 · 요금 유료'},
   ],
 };
 function listFromApi(items){
@@ -1784,6 +1782,12 @@ function getFestivalPosterTheme(item,key,index){
 function renderFestivalPoster(item,key,index){
   if(key==='yeosu' && (item.name||'').includes('밤바다 불꽃축제')){
     return `<div class="festival-poster image" style="background-image:url('assets/yeosu-fireworks-poster.png')" aria-label="${item.name} 포스터"></div>`;
+  }
+  if(key==='boseong' && (item.name||'').includes('보성다향대축제')){
+    return `<div class="festival-poster image" style="background-image:url('assets/boseong-tea-festival-poster.jpeg')" aria-label="${item.name} 포스터"></div>`;
+  }
+  if(key==='gangjin' && (item.name||'').includes('전라병영성축제')){
+    return `<div class="festival-poster image" style="background-image:url('assets/gangjin-byeongyeong-festival-poster.jpeg')" aria-label="${item.name} 포스터"></div>`;
   }
   const theme=getFestivalPosterTheme(item,key,index);
   return `
