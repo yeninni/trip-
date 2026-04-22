@@ -900,11 +900,11 @@ body{
       <div>
         <div class="map-frame-kicker">Map Preview</div>
         <div class="map-frame-title" id="mapFrameTitle">전남 전역 미리보기</div>
-        <div class="map-frame-sub" id="mapFrameSub">지도를 눌러 지역 분위기를 먼저 보고, 아래 카드에서 축제와 보관함 정보를 이어서 확인해보세요.</div>
+        <div class="map-frame-sub" id="mapFrameSub">지도를 눌러 지역 분위기를 먼저 보고, 아래 카드에서 축제와 코스 정보를 확인해보세요.</div>
       </div>
-      <div class="map-frame-badge">
-        <strong id="mapFrameBadge">6곳</strong>
-        <span id="mapFrameBadgeLabel">추천 지역</span>
+      <div class="map-frame-badge" style="display:none">
+        <strong id="mapFrameBadge"></strong>
+        <span id="mapFrameBadgeLabel"></span>
       </div>
     </div>
   </div>
@@ -1103,7 +1103,6 @@ const REGION_STDG_CODES={
 const LOCKER_API_KEY='c8d7a4c439a6ab3c5c9028a2e513913701fa8caa7c07cfa2e024187e3e8b7d42';
 const LOCKER_INFO_PUBLIC_URL='https://apis.data.go.kr/B551982/psl_v2/locker_info_v2';
 const LOCKER_DETAIL_PUBLIC_URL='https://apis.data.go.kr/B551982/psl_v2/locker_detail_info_v2';
-const LOCKER_REALTIME_PUBLIC_URL='https://apis.data.go.kr/B551982/psl_v2/locker_realtime_use_v2';
 
 const LOCKERS={
   yeosu:   [
@@ -1615,13 +1614,9 @@ function getLockerSummary(key){
   const source=key===curRegion&&lockerD.length?lockerD:[];
   return source.reduce((acc,item)=>{
     acc.locations+=1;
-    if(typeof item.avail==='number'){
-      acc.avail+=item.avail;
-      acc.realtimeLocations+=1;
-    }
     acc.total+=Number(item.total||0);
     return acc;
-  },{locations:0,avail:0,total:0,known:source.length>0,realtimeLocations:0});
+  },{locations:0,total:0,known:source.length>0});
 }
 
 function showLockerOnMap(lat,lng,name){
@@ -1770,7 +1765,6 @@ function formatLockerTypeSummary(item){
 
 function getLockerPublicUrl(path){
   if(path.includes('/detail'))return LOCKER_DETAIL_PUBLIC_URL;
-  if(path.includes('/realtime'))return LOCKER_REALTIME_PUBLIC_URL;
   return LOCKER_INFO_PUBLIC_URL;
 }
 
@@ -1801,29 +1795,19 @@ async function fetchLockerEndpoint(path,stdgCd,allowNoData=false){
   throw lastError||new Error('locker_api_error');
 }
 
-function normalizeLockerData(infoItems,realtimeItems,detailItems=[]){
-  const realtimeMap=new Map(realtimeItems.map(item=>[String(item.stlckId),item]));
+function normalizeLockerData(infoItems,detailItems=[]){
   const detailMap=summarizeLockerKinds(detailItems);
   return infoItems.map(item=>{
     const lockerId=String(item.stlckId||'');
-    const realtime=realtimeMap.get(lockerId)||null;
     const detail=detailMap.get(lockerId)||{small:0,medium:0,large:0,other:0,total:0};
-    const hasRealtime=!!realtime;
-    const avail=hasRealtime
-      ? normalizeLockerCount(realtime.usePsbltyLrgszStlckCnt)+
-        normalizeLockerCount(realtime.usePsbltyMdmszStlckCnt)+
-        normalizeLockerCount(realtime.usePsbltySmlszStlckCnt)
-      : null;
     const total=detail.total||normalizeLockerCount(item.stlckCnt);
     return {
       n:normalizeLockerName(item),
       addr:normalizeLockerAddress(item),
-      avail,
       total,
       lat:Number(item.lat),
       lng:Number(item.lot),
       stlckId:lockerId,
-      hasRealtime,
       small:detail.small,
       medium:detail.medium,
       large:detail.large,
@@ -1843,15 +1827,13 @@ async function loadLockerData(regionKey){
   }
   let nextLockerData=[];
   try{
-    const [infoPayload,detailPayload,realtimePayload]=await Promise.all([
+    const [infoPayload,detailPayload]=await Promise.all([
       fetchLockerEndpoint('/api/locker/info',stdgCd),
       fetchLockerEndpoint('/api/locker/detail',stdgCd,true),
-      fetchLockerEndpoint('/api/locker/realtime',stdgCd,true),
     ]);
     const infoItems=getLockerApiItems(infoPayload);
     const detailItems=getLockerApiItems(detailPayload);
-    const realtimeItems=getLockerApiItems(realtimePayload);
-    nextLockerData=normalizeLockerData(infoItems,realtimeItems,detailItems);
+    nextLockerData=normalizeLockerData(infoItems,detailItems);
   }catch(error){
     console.error('locker load failed',regionKey,error);
     nextLockerData=[];
@@ -1876,7 +1858,7 @@ function updateMapFrame(key=curRegion){
     title.textContent='전남 전역 미리보기';
     sub.textContent='지도를 눌러 지역 분위기를 먼저 보고, 아래 카드에서 축제와 보관함 정보를 이어서 확인해보세요.';
     badge.textContent=`${Object.keys(RG).length}곳`;
-    badgeLabel.textContent='추천 지역';
+    badgeLabel.textContent='';
     return;
   }
   const region=RG[key];
@@ -1885,7 +1867,7 @@ function updateMapFrame(key=curRegion){
   title.textContent=`${region.n} 지도 프리뷰`;
   sub.textContent=`${region.sub} 흐름을 먼저 보고, 아래에서 대표 축제 ${festivals.length}건과 보관함 ${lockers.locations}곳을 이어서 확인해보세요.`;
   badge.textContent=`${lockers.avail}/${lockers.total||0}`;
-  badgeLabel.textContent='보관함 여유';
+  badgeLabel.textContent='보관함 위치';
 }
 
 function renderFestivalSection(key,limit=2){
@@ -1920,7 +1902,7 @@ function renderFestivalSection(key,limit=2){
 
 function renderLockerPreviewSection(regionKey,items){
   if(!items.length){
-    return `<div class="empty" style="padding-top:18px"><div class="empty-s">코스를 찾으면 지역 보관함 여유 현황을 보여드려요.</div></div>`;
+    return `<div class="empty" style="padding-top:18px"><div class="empty-s">코스를 찾으면 지역 보관함 위치를 보여드려요.</div></div>`;
   }
   const totalSlots=items.reduce((sum,item)=>sum+item.total,0);
   const freeSlots=items.reduce((sum,item)=>sum+item.avail,0);
@@ -1928,24 +1910,24 @@ function renderLockerPreviewSection(regionKey,items){
   return `<div class="info-panel locker-feature">
     <div class="info-panel-head">
       <div class="info-panel-title">짐보관 메인 보드</div>
-      <div class="info-panel-note">이동 전에 여유 칸과 혼잡도를 먼저 보고 출발해요</div>
+      <div class="info-panel-note">이동 전에 보관함 위치와 규모를 먼저 확인해요</div>
     </div>
     <div class="locker-hero">
       <div class="locker-hero-copy">
         <div class="locker-hero-kicker">Core Feature · Locker</div>
         <div class="locker-hero-title">짐부터 가볍게 맡기고 코스를 움직일 수 있게</div>
-        <div class="locker-hero-text">역, 터미널, 관광안내소 기준으로 보관 거점을 먼저 보여주고 여유 칸까지 한 번에 확인할 수 있게 구성했어요.</div>
+        <div class="locker-hero-text">역, 터미널, 관광안내소 기준으로 보관 거점과 전체 칸 수를 확인할 수 있게 구성했어요.</div>
       </div>
       <div class="locker-hero-stats">
         <div class="locker-stat">
-          <div class="locker-stat-label">현재 여유 칸</div>
+          <div class="locker-stat-label">전체 보관 칸</div>
           <div class="locker-stat-value">${freeSlots}</div>
           <div class="locker-stat-copy">총 ${totalSlots}칸 중 바로 이용 가능한 공간</div>
         </div>
         <div class="locker-stat">
           <div class="locker-stat-label">혼잡 지점</div>
           <div class="locker-stat-value">${crowdedCount}</div>
-          <div class="locker-stat-copy">미리 피해서 동선을 짜야 하는 만석 지점</div>
+          <div class="locker-stat-copy">위치와 규모를 확인할 수 있는 보관 지점</div>
         </div>
       </div>
     </div>
@@ -1953,7 +1935,7 @@ function renderLockerPreviewSection(regionKey,items){
       const ratio=item.total?item.avail/item.total:0;
       const pct=item.total?Math.round(ratio*100):0;
       const state=item.avail===0?'full':ratio<0.35?'warn':'ok';
-      const label=state==='full'?'만석':state==='warn'?'혼잡':'여유';
+      const label='위치';
       const fillColor=state==='full'?'#ef4444':state==='warn'?'#d97706':'var(--leaf)';
       return `<button class="locker-feature-card" type="button" onclick="focusLocker(${index},'${regionKey}')">
         <div class="locker-feature-head">
@@ -1967,7 +1949,7 @@ function renderLockerPreviewSection(regionKey,items){
         <div class="locker-preview-meter"><div class="locker-preview-fill" style="width:${pct}%;background:${fillColor}"></div></div>
       </button>`;
     }).join('')}</div>
-    <div class="locker-preview-hint">실제 연동 단계에서는 지역별 실시간 보관함 여유 데이터로 교체됩니다.</div>
+    <div class="locker-preview-hint">지역별 보관함 위치 데이터로 표시됩니다.</div>
   </div>`;
 }
 
@@ -1975,22 +1957,16 @@ function renderLockerPreviewSection(regionKey,items){
   if(!items.length){
     return '';
   }
-  const realtimeItems=items.filter(item=>typeof item.avail==='number');
   const totalSlots=items.reduce((sum,item)=>sum+Number(item.total||0),0);
   return `<div class="info-panel locker-feature">
     <div class="info-panel-head">
       <div class="info-panel-title">근처 보관함</div>
-      <div class="info-panel-note">${realtimeItems.length?'실시간 여유 정보 포함':'위치 정보 중심'}</div>
+      <div class="info-panel-note">위치와 보관함 규모만 표시합니다</div>
     </div>
     <div class="locker-feature-list">${items.map((item,index)=>{
-      const hasRealtime=typeof item.avail==='number';
-      const ratio=hasRealtime&&item.total?item.avail/item.total:0;
-      const pct=hasRealtime&&item.total?Math.round(ratio*100):100;
-      const state=hasRealtime?(item.avail===0?'full':ratio<0.35?'warn':'ok'):'unknown';
-      const label=state==='unknown'?'위치':state==='full'?'만석':state==='warn'?'혼잡':'여유';
-      const fillColor=state==='full'?'#ef4444':state==='warn'?'#d97706':state==='unknown'?'#94a3b8':'var(--leaf)';
-      const occupied=hasRealtime?Math.max(Number(item.total||0)-item.avail,0):null;
-      const copy=hasRealtime?`${occupied}/${item.total}칸 사용 중 · ${item.avail}칸 남음`:`총 ${item.total||0}칸 운영`;
+      const pct=100;
+      const fillColor='#94a3b8';
+      const copy=`총 ${item.total||0}칸 운영`;
       const detailCopy=item.typeSummary?`<span class="locker-preview-cap">${item.typeSummary}</span>`:'';
       return `<button class="locker-feature-card" type="button" onclick="focusLocker(${index},'${regionKey}')">
         <div class="locker-feature-head">
@@ -2000,7 +1976,7 @@ function renderLockerPreviewSection(regionKey,items){
             <span class="locker-preview-cap">${copy}</span>
             ${detailCopy}
           </div>
-          <span class="locker-preview-state ${state}">${label}</span>
+          <span class="locker-preview-state unknown">위치</span>
         </div>
         <div class="locker-preview-meter"><div class="locker-preview-fill" style="width:${pct}%;background:${fillColor}"></div></div>
       </button>`;
@@ -2047,7 +2023,7 @@ function updatePeek(key=curRegion){
   actions.innerHTML=`
     <span class="peek-chip">${lvLbl(crowd.level)} · ${Number(crowd.visitors||0).toLocaleString()}명</span>
     <button class="peek-chip peek-chip-btn" onclick="event.stopPropagation();${crowdD.length?'openLockerTab()':'openSP()'}">
-      ${crowdD.length?`보관함 ${locker.locations}곳 · 여유 ${locker.avail}칸`:'이 지역으로 검색하기'}
+      ${crowdD.length?`보관함 위치 ${locker.locations}곳`:'이 지역으로 검색하기'}
     </button>`;
 }
 
@@ -2062,7 +2038,7 @@ function renderLandingState(){
         <div class="landing-hero-shell">
           <div class="landing-hero-copy">
             <div class="landing-eyebrow">한적한 여행 추천</div>
-            <div class="landing-title">짐보관부터 챙기고, 복잡한 인기 코스 대신 더 여유로운 전남을 골라보세요</div>
+            <div class="landing-title">복잡한 인기 코스 대신 더 느긋한 전남을 골라보세요</div>
             <div class="landing-copy">${featured.n}부터 둘러보면 ${featured.sub} 분위기를 빠르게 감 잡을 수 있어요. 날짜를 정하면 혼잡도 기반 코스와 함께 보관 거점까지 바로 이어서 확인할 수 있습니다.</div>
             <div class="landing-cta-row">
               <button class="landing-btn primary" onclick="openSP()">날짜 선택하고 코스 찾기</button>
@@ -2219,7 +2195,7 @@ function renderCourse(){
   <button class="access-card" onclick="openLockerTab()">
     <div>
       <div class="access-kicker">보관함 빠른 이동</div>
-      <div class="access-title">${locker.locations}개 보관함 · 총 ${locker.avail}/${locker.total}칸 여유</div>
+      <div class="access-title">${locker.locations}개 보관함 · 총 ${locker.total}칸</div>
       <div class="access-copy">지금 가장 먼저 확인해야 할 기능이에요. 짐을 어디에 맡길지 정한 뒤 더 가벼운 동선으로 이동해보세요.</div>
     </div>
     <div class="access-arrow">›</div>
@@ -2298,7 +2274,7 @@ function renderLocker(){
         <div class="lk-addr">📍 ${l.addr}</div>
         <div class="lk-row">
           <div class="lk-dot ${l.avail>0?'ok':'full'}"></div>
-          <span class="lk-txt" style="color:${l.avail>0?'var(--leaf)':'#ef4444'}">${l.avail>0?`여유 ${l.avail}/${l.total}칸 (${pct}% 남음)`:'만석'}</span>
+          <span class="lk-txt" style="color:var(--ink2)">총 ${l.total}칸 운영</span>
         </div>
         <div class="lk-prog"><div class="lk-prog-fill" style="width:${pct}%;background:${l.avail>0?'var(--leaf)':'#ef4444'}"></div></div>
       </div>
@@ -2395,9 +2371,7 @@ function focusLocker(index,key=curRegion){
   const source=regionKey===curRegion&&lockerD.length?lockerD:(LOCKERS[regionKey]||[]);
   const locker=source[index];
   if(!locker||locker.lat==null||locker.lng==null)return;
-  const copy=typeof locker.avail==='number'
-    ? `${locker.addr} · ${locker.avail}/${locker.total} available`
-    : `${locker.addr} · ${locker.total||0} total`;
+  const copy=`${locker.addr} · 총 ${locker.total||0}칸`;
   if(mapProvider==='kakao'){
     map.setLevel(4);
     map.panTo(makeLatLng(locker.lat,locker.lng));
@@ -2484,15 +2458,62 @@ document.addEventListener('touchmove',e=>{
 },{passive:true});
 document.addEventListener('touchend',()=>{drag.on=false});
 
+function updateMapFrame(key=curRegion){
+  const title=document.getElementById('mapFrameTitle');
+  const sub=document.getElementById('mapFrameSub');
+  const badge=document.getElementById('mapFrameBadge');
+  const badgeLabel=document.getElementById('mapFrameBadgeLabel');
+  const badgeWrap=badge?.closest('.map-frame-badge');
+  if(!key||!RG[key]){
+    title.textContent='전남 지역 미리보기';
+    sub.textContent='지도를 눌러 지역 분위기를 먼저 보고, 아래 카드에서 축제와 코스 정보를 확인해보세요.';
+    if(badgeWrap)badgeWrap.style.display='none';
+    if(badge)badge.textContent='';
+    if(badgeLabel)badgeLabel.textContent='';
+    return;
+  }
+  const region=RG[key];
+  const festivals=getFestivalItems(key);
+  const lockers=getLockerSummary(key);
+  title.textContent=`${region.n} 지도 프리뷰`;
+  sub.textContent=lockers.locations
+    ? `${region.sub} 흐름을 먼저 보고, 대표 축제 ${festivals.length}건과 근처 보관함 위치 ${lockers.locations}곳을 확인해보세요.`
+    : `${region.sub} 흐름을 먼저 보고, 대표 축제 ${festivals.length}건과 코스 분위기를 확인해보세요.`;
+  if(badgeWrap)badgeWrap.style.display='none';
+  if(badge)badge.textContent='';
+  if(badgeLabel)badgeLabel.textContent='';
+}
+
+function updatePeek(key=curRegion){
+  const actions=document.getElementById('peekActions');
+  if(!key||!RG[key]){
+    document.getElementById('peekIcon').textContent='🌿';
+    document.getElementById('peekTitle').textContent='전남 여행을 계획해보세요';
+    document.getElementById('peekMeta').innerHTML='지역 미리보기와 날짜 선택으로 한적한 코스를 바로 찾을 수 있어요';
+    actions.innerHTML=`<button class="peek-chip peek-chip-btn" onclick="event.stopPropagation();openSP()">날짜 고르고 시작하기</button>`;
+    return;
+  }
+  const ri=RG[key];
+  const crowd=getCrowdEntry(key);
+  const locker=getLockerSummary(key);
+  document.getElementById('peekIcon').textContent=ri.e;
+  document.getElementById('peekTitle').textContent=crowdD.length?`${ri.n} 추천 코스`:`${ri.n} 미리보기`;
+  document.getElementById('peekMeta').innerHTML=crowdD.length
+    ? `혼잡도 <b>${lvLbl(crowd.level)}</b> · ${courseD.length}개 코스 · ${ri.sub}`
+    : `${ri.sub} · ${ri.theme} 중심 · 미리보기 후 바로 검색 가능`;
+  const lockerChip=locker.locations
+    ? `<span class="peek-chip" style="background:rgba(125,201,111,.2);color:var(--moss)">보관함 위치 ${locker.locations}곳</span>`
+    : '';
+  actions.innerHTML=`<span class="peek-chip">${lvLbl(crowd.level)} · ${Number(crowd.visitors||0).toLocaleString()}명</span>${lockerChip}`;
+}
+
 function renderLandingState(){
   const isOverview=!(curRegion&&RG[curRegion]);
   const key=isOverview?getBestRegionKey():curRegion;
   const featured=RG[key];
   const locker=getLockerSummary(key);
   const lockerCopy=locker.locations
-    ? locker.realtimeLocations
-      ? `근처 보관함 ${locker.locations}곳의 여유 현황까지 함께 살펴볼 수 있어요.`
-      : `근처 보관함 ${locker.locations}곳의 위치와 전체 칸 수를 함께 확인할 수 있어요.`
+    ? `근처 보관함 ${locker.locations}곳의 위치와 전체 칸 수를 함께 확인할 수 있어요.`
     : '지역 분위기와 축제 흐름을 먼저 보고 이동 동선을 골라보세요.';
   renderSideRail(key,!isOverview&&key===curRegion?lockerD:[]);
   document.getElementById('sheetBody').innerHTML=`
