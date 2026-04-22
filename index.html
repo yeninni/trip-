@@ -639,6 +639,16 @@ body{
   display:flex;flex-direction:column;justify-content:space-between;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);
 }
+.festival-poster.image{
+  padding:0;
+  background-size:cover!important;
+  background-position:center;
+  background-repeat:no-repeat;
+  box-shadow:0 14px 28px rgba(26,31,27,.18);
+}
+.festival-poster.image::after{display:none}
+.festival-poster.image .festival-poster-top,
+.festival-poster.image .festival-poster-bottom{display:none}
 .festival-poster::after{
   content:'';position:absolute;inset:auto -18% -24% auto;width:110px;height:110px;
   border-radius:50%;background:rgba(255,255,255,.16);filter:blur(2px);
@@ -1230,7 +1240,7 @@ const festivalLiveByRegion={};
 const festivalLoadState={};
 const FESTIVALS={
   yeosu:[
-    {season:'봄·초여름',date:'2026.04.18 - 04.20',name:'해양 야경 페스타',place:'이순신광장 · 해양공원',copy:'밤바다 산책, 버스킹, 해상 포토스팟을 묶어 보기 좋은 시즌형 행사예요.'},
+    {season:'봄·초여름',date:'2026.04.18 - 04.20',name:'여수 밤바다 불꽃축제',place:'이순신광장 · 해양공원',copy:'밤바다를 배경으로 불꽃 연출과 야간 공연을 함께 즐기기 좋은 대표 여수 야경 축제예요.'},
     {season:'가을',date:'2026.05.02 - 05.04',name:'섬·바다 문화주간',place:'오동도 · 엑스포 일대',copy:'섬 산책과 바다 전망 코스를 느긋하게 연결하기 좋은 분위기예요.'},
   ],
   suncheon:[
@@ -1773,6 +1783,9 @@ function getFestivalPosterTheme(item,key,index){
 }
 
 function renderFestivalPoster(item,key,index){
+  if(key==='yeosu' && (item.name||'').includes('밤바다 불꽃축제')){
+    return `<div class="festival-poster image" style="background-image:url('assets/yeosu-fireworks-poster.png')" aria-label="${item.name} 포스터"></div>`;
+  }
   const theme=getFestivalPosterTheme(item,key,index);
   return `
     <div class="festival-poster" style="background:${theme.bg}">
