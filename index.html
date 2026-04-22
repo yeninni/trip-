@@ -617,25 +617,101 @@ body{
 .info-panel-note{
   font-size:10px;color:var(--ink4);line-height:1.5;text-align:right;
 }
-.festival-schedule{display:flex;flex-direction:column;gap:8px}
-.festival-row{
-  display:grid;grid-template-columns:82px 1fr auto;gap:10px;align-items:center;
-  padding:11px 12px;border-radius:16px;background:rgba(223,243,210,.72);
+.festival-shell{margin-top:4px}
+.festival-stage{
+  position:relative;overflow:hidden;
+}
+.festival-track{
+  display:flex;gap:12px;overflow-x:auto;scroll-behavior:smooth;scroll-snap-type:x mandatory;
+  scrollbar-width:none;
+}
+.festival-track::-webkit-scrollbar{display:none}
+.festival-card{
+  min-width:100%;scroll-snap-align:start;
+  display:grid;grid-template-columns:minmax(118px,.42fr) minmax(0,1fr);
+  gap:14px;padding:14px;border-radius:20px;
+  background:linear-gradient(180deg,rgba(223,243,210,.56),rgba(248,252,244,.94));
   border:1px solid rgba(255,255,255,.88);
 }
-.festival-date{
-  font-size:11px;font-weight:800;color:var(--moss);letter-spacing:.02em;
+.festival-poster{
+  min-height:176px;border-radius:18px;padding:14px;
+  color:#fff;position:relative;overflow:hidden;
+  display:flex;flex-direction:column;justify-content:space-between;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);
 }
-.festival-name{
-  font-size:13px;font-weight:700;color:var(--ink);
+.festival-poster::after{
+  content:'';position:absolute;inset:auto -18% -24% auto;width:110px;height:110px;
+  border-radius:50%;background:rgba(255,255,255,.16);filter:blur(2px);
 }
-.festival-meta{
-  margin-top:3px;font-size:11px;color:var(--ink3);line-height:1.5;
+.festival-poster-top,.festival-poster-bottom{position:relative;z-index:1}
+.festival-poster-kicker{
+  font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.82;
+}
+.festival-poster-title{
+  margin-top:8px;font-family:var(--font-display);font-size:20px;line-height:1.15;font-weight:700;
+}
+.festival-poster-icon{
+  align-self:flex-end;width:46px;height:46px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;font-size:24px;
+  background:rgba(255,255,255,.18);backdrop-filter:blur(4px);
+}
+.festival-poster-tag{
+  display:inline-flex;align-items:center;width:max-content;
+  margin-top:10px;padding:6px 10px;border-radius:999px;
+  background:rgba(255,255,255,.16);font-size:10px;font-weight:700;
+}
+.festival-copy{
+  min-width:0;display:flex;flex-direction:column;justify-content:center;
+}
+.festival-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
 }
 .festival-chip{
-  padding:6px 9px;border-radius:999px;background:rgba(82,160,106,.14);
-  color:var(--moss);font-size:10px;font-weight:700;white-space:nowrap;
+  padding:7px 10px;border-radius:999px;background:rgba(82,160,106,.14);
+  color:var(--moss);font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;
 }
+.festival-date{
+  font-size:12px;font-weight:800;color:var(--moss);letter-spacing:.02em;
+}
+.festival-name{
+  margin-top:8px;font-size:22px;font-weight:700;color:var(--ink);line-height:1.2;
+}
+.festival-meta{
+  margin-top:10px;font-size:12px;color:var(--ink3);line-height:1.7;
+}
+.festival-summary{
+  margin-top:12px;font-size:13px;color:var(--ink2);line-height:1.7;
+}
+.festival-actions{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;
+}
+.festival-index{
+  font-size:11px;font-weight:700;color:var(--ink4);
+}
+.festival-nav{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 2px;pointer-events:none;
+}
+.festival-nav button{
+  width:38px;height:38px;border:none;border-radius:12px;cursor:pointer;
+  background:rgba(255,255,255,.92);color:var(--moss);font-size:16px;font-weight:700;
+  box-shadow:0 8px 18px rgba(47,105,64,.08);
+  pointer-events:auto;
+  opacity:0;transform:translateY(0) scale(.92);
+  transition:opacity .18s ease,transform .18s ease,background .18s ease;
+}
+.festival-nav button:first-child{transform:translateX(-18px) scale(.92)}
+.festival-nav button:last-child{transform:translateX(18px) scale(.92)}
+.festival-stage:hover .festival-nav button,
+.festival-stage:focus-within .festival-nav button{
+  opacity:1;
+}
+.festival-stage:hover .festival-nav button:first-child,
+.festival-stage:focus-within .festival-nav button:first-child{transform:translateX(-8px) scale(1)}
+.festival-stage:hover .festival-nav button:last-child,
+.festival-stage:focus-within .festival-nav button:last-child{transform:translateX(8px) scale(1)}
+.festival-nav button:hover{transform:translateY(-1px) scale(1.03)!important}
 .festival-foot{
   margin-top:10px;font-size:10px;color:var(--ink4);line-height:1.55;
 }
@@ -837,7 +913,14 @@ body{
   .section-note{margin-top:4px;text-align:left}
   .info-panel-head{display:block}
   .info-panel-note{margin-top:4px;text-align:left}
-  .festival-row{grid-template-columns:1fr;gap:6px}
+  .festival-card{grid-template-columns:1fr}
+  .festival-poster{min-height:150px}
+  .festival-name{font-size:18px}
+  .festival-nav button{
+    opacity:1;
+  }
+  .festival-nav button:first-child{transform:translateX(-4px) scale(1)}
+  .festival-nav button:last-child{transform:translateX(4px) scale(1)}
 }
 
 /* ── MAP MARKER ── */
@@ -1673,26 +1756,82 @@ function updateMapFrame(key=curRegion){
   badgeLabel.textContent=lockers.knownAvailCount?'보관함 여유':'보관함 규모';
 }
 
+function getFestivalPosterTheme(item,key,index){
+  const seed=`${item.name||''} ${item.place||''} ${item.season||''}`.toLowerCase();
+  const themes=[
+    {bg:'linear-gradient(160deg,#1f7668 0%,#56b58c 52%,#d8f2c6 100%)', icon:'🎉', kicker:'FESTIVAL', accent:'현장 체험'},
+    {bg:'linear-gradient(160deg,#2b5f8c 0%,#5ba6db 52%,#dbeefe 100%)', icon:'🌊', kicker:'COASTAL', accent:'바다 감성'},
+    {bg:'linear-gradient(160deg,#6f4f94 0%,#b180d1 52%,#efe3fb 100%)', icon:'🎶', kicker:'NIGHT LIVE', accent:'야간 무드'},
+    {bg:'linear-gradient(160deg,#926b2f 0%,#d8ae57 52%,#f7efd4 100%)', icon:'🏛️', kicker:'CULTURE', accent:'문화 산책'},
+    {bg:'linear-gradient(160deg,#4d7a2e 0%,#94c658 52%,#e6f6d1 100%)', icon:'🌿', kicker:'GREEN DAY', accent:'자연 코스'},
+  ];
+  if(seed.includes('바다')||seed.includes('해양')||seed.includes('항구'))return themes[1];
+  if(seed.includes('야경')||seed.includes('뮤직')||seed.includes('밤'))return themes[2];
+  if(seed.includes('문화')||seed.includes('역사')||seed.includes('유산'))return themes[3];
+  if(seed.includes('정원')||seed.includes('생태')||seed.includes('습지')||seed.includes('녹차'))return themes[4];
+  return themes[index%themes.length];
+}
+
+function renderFestivalPoster(item,key,index){
+  const theme=getFestivalPosterTheme(item,key,index);
+  return `
+    <div class="festival-poster" style="background:${theme.bg}">
+      <div class="festival-poster-top">
+        <div class="festival-poster-kicker">${theme.kicker}</div>
+        <div class="festival-poster-title">${item.name||RG[key]?.n||'Festival'}</div>
+        <div class="festival-poster-tag">${theme.accent}</div>
+      </div>
+      <div class="festival-poster-bottom">
+        <div class="festival-poster-icon">${theme.icon}</div>
+      </div>
+    </div>`;
+}
+
+function slideFestival(key,dir){
+  const track=document.getElementById(`festivalTrack-${key}`);
+  if(!track)return;
+  const card=track.querySelector('.festival-card');
+  if(!card)return;
+  const amount=card.getBoundingClientRect().width+12;
+  track.scrollBy({left:amount*dir,behavior:'smooth'});
+}
+
 function renderFestivalSection(key,limit=2){
   const items=getFestivalsForRegion(key).slice(0,limit);
   if(!items.length){
     return `<div class="info-panel"><div class="empty" style="padding-top:18px"><div class="empty-s">대표 축제 정보를 준비 중이에요.</div></div></div>`;
   }
+  const trackId=`festivalTrack-${key}`;
   return `<div class="info-panel">
     <div class="info-panel-head">
       <div class="info-panel-title">다가오는 축제 일정</div>
       <div class="info-panel-note">API 연동 전 예시 일정이에요</div>
     </div>
-    <div class="festival-schedule">${items.map(item=>`
-      <div class="festival-row">
-        <div class="festival-date">${item.date||item.season}</div>
-        <div>
-          <div class="festival-name">${item.name}</div>
-          <div class="festival-meta">📍 ${item.place} · ${item.copy}</div>
-        </div>
-        <div class="festival-chip">${item.season}</div>
+    <div class="festival-shell">
+      <div class="festival-stage">
+        <div class="festival-track" id="${trackId}">${items.map((item,index)=>`
+          <article class="festival-card">
+            ${renderFestivalPoster(item,key,index)}
+            <div class="festival-copy">
+              <div class="festival-head">
+                <div class="festival-date">${item.date||item.season}</div>
+                <div class="festival-chip">${item.season}</div>
+              </div>
+              <div class="festival-name">${item.name}</div>
+              <div class="festival-meta">📍 ${item.place}</div>
+              <div class="festival-summary">${item.copy}</div>
+              <div class="festival-actions">
+                <div class="festival-index">${index+1} / ${items.length}</div>
+              </div>
+            </div>
+          </article>
+        `).join('')}</div>
+        ${items.length>1?`<div class="festival-nav">
+          <button type="button" onclick="slideFestival('${key}',-1)" aria-label="이전 축제">‹</button>
+          <button type="button" onclick="slideFestival('${key}',1)" aria-label="다음 축제">›</button>
+        </div>`:''}
       </div>
-    `).join('')}</div>
+    </div>
     <div class="festival-foot">실제 배포 단계에서는 축제 API 데이터로 자동 갱신할 예정입니다.</div>
   </div>`;
 }
