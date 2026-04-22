@@ -588,6 +588,7 @@ body{
   background:rgba(255,255,255,.82);
   box-shadow:inset 0 0 0 1px rgba(125,201,111,.24);
 }
+.access-card{display:none!important}
 .info-split{
   padding:12px 20px 0;
   display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.95fr);gap:12px;
@@ -1006,6 +1007,7 @@ let map,markers=[],lines=[],courseMarkers=[],activeInfoOverlay=null,activeLeafle
 let mapProvider='leaflet';
 let curTab='course',curRegion=null;
 let crowdD=[],courseD=[],lockerD=[];
+let lockerFetchId=0;
 let festivalD=null;
 let festivalMeta={source:'sample',requestedDate:null};
 let kakaoBoundsGuard=false;
@@ -1090,6 +1092,19 @@ const COURSES={
     {t:'stay', e:'🏠',bg:'#fce7f3',n:'강진 고택 민박',  when:'17:00',d:'조용한 역사 마을 숙박',          tags:['숙박'],       lat:34.6421,lng:126.7671},
   ],
 };
+const REGION_STDG_CODES={
+  yeosu:'4613000000',
+  suncheon:'4615000000',
+  damyang:'4671000000',
+  mokpo:'4611000000',
+  boseong:'4678000000',
+  gangjin:'4681000000',
+};
+const LOCKER_API_KEY='c8d7a4c439a6ab3c5c9028a2e513913701fa8caa7c07cfa2e024187e3e8b7d42';
+const LOCKER_INFO_PUBLIC_URL='https://apis.data.go.kr/B551982/psl_v2/locker_info_v2';
+const LOCKER_DETAIL_PUBLIC_URL='https://apis.data.go.kr/B551982/psl_v2/locker_detail_info_v2';
+const LOCKER_REALTIME_PUBLIC_URL='https://apis.data.go.kr/B551982/psl_v2/locker_realtime_use_v2';
+
 const LOCKERS={
   yeosu:   [
     {n:'여수엑스포역 보관함',addr:'여수시 박람회길 1',avail:12,total:20,lat:34.7607,lng:127.6598},
@@ -1597,12 +1612,38 @@ function getCrowdEntry(key){
 }
 
 function getLockerSummary(key){
-  return (LOCKERS[key]||[]).reduce((acc,item)=>{
+  const source=key===curRegion&&lockerD.length?lockerD:[];
+  return source.reduce((acc,item)=>{
     acc.locations+=1;
-    acc.avail+=item.avail;
-    acc.total+=item.total;
+    if(typeof item.avail==='number'){
+      acc.avail+=item.avail;
+      acc.realtimeLocations+=1;
+    }
+    acc.total+=Number(item.total||0);
     return acc;
-  },{locations:0,avail:0,total:0});
+  },{locations:0,avail:0,total:0,known:source.length>0,realtimeLocations:0});
+}
+
+function showLockerOnMap(lat,lng,name){
+  if(!map||typeof lat!=='number'||typeof lng!=='number')return;
+  if(mapProvider==='kakao'){
+    map.setLevel(5);
+    map.panTo(makeLatLng(lat,lng));
+    showInfoOverlay({n:name,d:'Locker',lat,lng},'Locker');
+    return;
+  }
+  if(activeLeafletPopup){
+    map.closePopup(activeLeafletPopup);
+  }
+  map.flyTo([lat,lng],13,{duration:.8});
+  activeLeafletPopup=L.popup({
+    closeButton:false,
+    className:'map-popup-shell',
+    offset:[0,-18],
+  })
+    .setLatLng([lat,lng])
+    .setContent(makePopupContent(name,'','Locker'))
+    .openOn(map);
 }
 
 function getKakaoMode(){
@@ -1612,17 +1653,212 @@ function getKakaoMode(){
   return'walk';
 }
 
+function getLockerEntryForSpot(spot){
+  if(!curRegion||!spot)return null;
+  const source=lockerD.length?lockerD:[];
+  if(!source.length)return null;
+  const exact=source.find(item=>item.n===spot.n);
+  if(exact)return exact;
+  if(spot.t!=='lock')return null;
+  const normalizedSpot=String(spot.n||'').replace(/\s*보관함$/,'').trim();
+  const byName=source.find(item=>String(item.n||'').replace(/\s*보관함$/,'').trim()===normalizedSpot);
+  if(byName)return byName;
+  if(typeof spot.lat!=='number'||typeof spot.lng!=='number')return source[0]||null;
+  return source.reduce((best,item)=>{
+    if(typeof item.lat!=='number'||typeof item.lng!=='number')return best;
+    if(!best)return item;
+    const bestDistance=(best.lat-spot.lat)**2+(best.lng-spot.lng)**2;
+    const itemDistance=(item.lat-spot.lat)**2+(item.lng-spot.lng)**2;
+    return itemDistance<bestDistance?item:best;
+  },null)||source[0]||null;
+}
+
+function getKakaoSpotLabel(spot){
+  const lockerEntry=getLockerEntryForSpot(spot);
+  if(!lockerEntry)return spot.n;
+  return lockerEntry.n
+    .replace(/\s*대형 보관함$/,'')
+    .replace(/\s*코인 보관함$/,'')
+    .replace(/\s*입구 보관함$/,'')
+    .replace(/\s*보관함$/,'')
+    .trim();
+}
+
 function buildKakaoPlaceUrl(spot){
-  return `https://map.kakao.com/link/to/${encodeURIComponent(spot.n)},${spot.lat},${spot.lng}`;
+  const lockerEntry=getLockerEntryForSpot(spot);
+  const lat=typeof lockerEntry?.lat==='number'?lockerEntry.lat:spot.lat;
+  const lng=typeof lockerEntry?.lng==='number'?lockerEntry.lng:spot.lng;
+  const name=getKakaoSpotLabel(spot);
+  if(typeof lat==='number'&&typeof lng==='number'){
+    return `https://map.kakao.com/link/map/${encodeURIComponent(name)},${lat},${lng}`;
+  }
+  const regionName=curRegion&&RG[curRegion]?.n?`${RG[curRegion].n} `:'';
+  const query=lockerEntry
+    ? `${name} ${lockerEntry.addr}`.trim()
+    : `${regionName}${spot.n}`.trim();
+  return `https://map.kakao.com/?q=${encodeURIComponent(query)}`;
 }
 
 function buildKakaoDirectionsUrl(spot,index){
+  const toLocker=getLockerEntryForSpot(spot);
+  const toLat=typeof toLocker?.lat==='number'?toLocker.lat:spot.lat;
+  const toLng=typeof toLocker?.lng==='number'?toLocker.lng:spot.lng;
+  const toName=getKakaoSpotLabel(spot);
   if(index===0){
-    return buildKakaoPlaceUrl(spot);
+    return `https://map.kakao.com/link/to/${encodeURIComponent(toName)},${toLat},${toLng}`;
   }
   const from=courseD[index-1];
-  const mode=getKakaoMode();
-  return `https://map.kakao.com/link/by/${mode}/${encodeURIComponent(from.n)},${from.lat},${from.lng}/${encodeURIComponent(spot.n)},${spot.lat},${spot.lng}`;
+  const fromLocker=getLockerEntryForSpot(from);
+  const fromLat=typeof fromLocker?.lat==='number'?fromLocker.lat:from.lat;
+  const fromLng=typeof fromLocker?.lng==='number'?fromLocker.lng:from.lng;
+  const fromName=getKakaoSpotLabel(from);
+  return `https://map.kakao.com/link/from/${encodeURIComponent(fromName)},${fromLat},${fromLng}/to/${encodeURIComponent(toName)},${toLat},${toLng}`;
+}
+
+function getLockerApiItems(payload){
+  return listFromApi(
+    payload?.body?.item||
+    payload?.body?.items||
+    payload?.response?.body?.item||
+    payload?.response?.body?.items?.item||
+    []
+  );
+}
+
+function normalizeLockerName(item){
+  return item.stlckRprsPstnNm||item.stlckDtlPstnNm||'Locker';
+}
+
+function normalizeLockerAddress(item){
+  return item.rnAddr||item.lnmAddr||item.addr||'';
+}
+
+function normalizeLockerCount(value){
+  const number=Number(value);
+  return Number.isFinite(number)?number:0;
+}
+
+function getLockerKindBucket(name=''){
+  if(name.includes('소형'))return 'small';
+  if(name.includes('중형'))return 'medium';
+  if(name.includes('대형'))return 'large';
+  return 'other';
+}
+
+function summarizeLockerKinds(detailItems){
+  const grouped=new Map();
+  detailItems.forEach(item=>{
+    const lockerId=String(item.stlckId||'');
+    if(!lockerId)return;
+    const current=grouped.get(lockerId)||{small:0,medium:0,large:0,other:0,total:0};
+    const bucket=getLockerKindBucket(String(item.stlckKndNm||''));
+    current[bucket]+=1;
+    current.total+=1;
+    grouped.set(lockerId,current);
+  });
+  return grouped;
+}
+
+function formatLockerTypeSummary(item){
+  const parts=[];
+  if(item.small)parts.push(`소형 ${item.small}칸`);
+  if(item.medium)parts.push(`중형 ${item.medium}칸`);
+  if(item.large)parts.push(`대형 ${item.large}칸`);
+  if(item.other)parts.push(`기타 ${item.other}칸`);
+  return parts.join(' · ');
+}
+
+function getLockerPublicUrl(path){
+  if(path.includes('/detail'))return LOCKER_DETAIL_PUBLIC_URL;
+  if(path.includes('/realtime'))return LOCKER_REALTIME_PUBLIC_URL;
+  return LOCKER_INFO_PUBLIC_URL;
+}
+
+async function fetchLockerEndpoint(path,stdgCd,allowNoData=false){
+  const query=`stdgCd=${encodeURIComponent(stdgCd)}&numOfRows=200&pageNo=1&type=JSON`;
+  const targets=[
+    `${path}?${query}`,
+    `${getLockerPublicUrl(path)}?serviceKey=${encodeURIComponent(LOCKER_API_KEY)}&${query}`,
+  ];
+  let lastError=null;
+  for(const target of targets){
+    try{
+      const response=await fetch(target,{mode:'cors',cache:'no-store'});
+      const payload=await response.json();
+      if(!response.ok){
+        throw new Error(payload?.detail||payload?.error||'locker_api_error');
+      }
+      const header=payload?.header||payload?.response?.header;
+      if(header?.resultCode&&!['00','K0'].includes(header.resultCode)){
+        if(allowNoData&&header.resultCode==='K3')return payload;
+        throw new Error(header.resultMsg||header.resultCode);
+      }
+      return payload;
+    }catch(error){
+      lastError=error;
+    }
+  }
+  throw lastError||new Error('locker_api_error');
+}
+
+function normalizeLockerData(infoItems,realtimeItems,detailItems=[]){
+  const realtimeMap=new Map(realtimeItems.map(item=>[String(item.stlckId),item]));
+  const detailMap=summarizeLockerKinds(detailItems);
+  return infoItems.map(item=>{
+    const lockerId=String(item.stlckId||'');
+    const realtime=realtimeMap.get(lockerId)||null;
+    const detail=detailMap.get(lockerId)||{small:0,medium:0,large:0,other:0,total:0};
+    const hasRealtime=!!realtime;
+    const avail=hasRealtime
+      ? normalizeLockerCount(realtime.usePsbltyLrgszStlckCnt)+
+        normalizeLockerCount(realtime.usePsbltyMdmszStlckCnt)+
+        normalizeLockerCount(realtime.usePsbltySmlszStlckCnt)
+      : null;
+    const total=detail.total||normalizeLockerCount(item.stlckCnt);
+    return {
+      n:normalizeLockerName(item),
+      addr:normalizeLockerAddress(item),
+      avail,
+      total,
+      lat:Number(item.lat),
+      lng:Number(item.lot),
+      stlckId:lockerId,
+      hasRealtime,
+      small:detail.small,
+      medium:detail.medium,
+      large:detail.large,
+      other:detail.other,
+      typeSummary:formatLockerTypeSummary(detail),
+      source:'api',
+    };
+  }).filter(item=>item.n&&Number.isFinite(item.lat)&&Number.isFinite(item.lng));
+}
+
+async function loadLockerData(regionKey){
+  const requestId=++lockerFetchId;
+  const stdgCd=REGION_STDG_CODES[regionKey];
+  if(!stdgCd){
+    lockerD=[];
+    return lockerD;
+  }
+  let nextLockerData=[];
+  try{
+    const [infoPayload,detailPayload,realtimePayload]=await Promise.all([
+      fetchLockerEndpoint('/api/locker/info',stdgCd),
+      fetchLockerEndpoint('/api/locker/detail',stdgCd,true),
+      fetchLockerEndpoint('/api/locker/realtime',stdgCd,true),
+    ]);
+    const infoItems=getLockerApiItems(infoPayload);
+    const detailItems=getLockerApiItems(detailPayload);
+    const realtimeItems=getLockerApiItems(realtimePayload);
+    nextLockerData=normalizeLockerData(infoItems,realtimeItems,detailItems);
+  }catch(error){
+    console.error('locker load failed',regionKey,error);
+    nextLockerData=[];
+  }
+  if(requestId!==lockerFetchId)return lockerD;
+  lockerD=nextLockerData;
+  return lockerD;
 }
 
 function getBestRegionKey(){
@@ -1735,11 +1971,49 @@ function renderLockerPreviewSection(regionKey,items){
   </div>`;
 }
 
+function renderLockerPreviewSection(regionKey,items){
+  if(!items.length){
+    return '';
+  }
+  const realtimeItems=items.filter(item=>typeof item.avail==='number');
+  const totalSlots=items.reduce((sum,item)=>sum+Number(item.total||0),0);
+  return `<div class="info-panel locker-feature">
+    <div class="info-panel-head">
+      <div class="info-panel-title">근처 보관함</div>
+      <div class="info-panel-note">${realtimeItems.length?'실시간 여유 정보 포함':'위치 정보 중심'}</div>
+    </div>
+    <div class="locker-feature-list">${items.map((item,index)=>{
+      const hasRealtime=typeof item.avail==='number';
+      const ratio=hasRealtime&&item.total?item.avail/item.total:0;
+      const pct=hasRealtime&&item.total?Math.round(ratio*100):100;
+      const state=hasRealtime?(item.avail===0?'full':ratio<0.35?'warn':'ok'):'unknown';
+      const label=state==='unknown'?'위치':state==='full'?'만석':state==='warn'?'혼잡':'여유';
+      const fillColor=state==='full'?'#ef4444':state==='warn'?'#d97706':state==='unknown'?'#94a3b8':'var(--leaf)';
+      const occupied=hasRealtime?Math.max(Number(item.total||0)-item.avail,0):null;
+      const copy=hasRealtime?`${occupied}/${item.total}칸 사용 중 · ${item.avail}칸 남음`:`총 ${item.total||0}칸 운영`;
+      const detailCopy=item.typeSummary?`<span class="locker-preview-cap">${item.typeSummary}</span>`:'';
+      return `<button class="locker-feature-card" type="button" onclick="focusLocker(${index},'${regionKey}')">
+        <div class="locker-feature-head">
+          <div>
+            <span class="locker-preview-name">${item.n}</span>
+            <span class="locker-preview-sub">${item.addr}</span>
+            <span class="locker-preview-cap">${copy}</span>
+            ${detailCopy}
+          </div>
+          <span class="locker-preview-state ${state}">${label}</span>
+        </div>
+        <div class="locker-preview-meter"><div class="locker-preview-fill" style="width:${pct}%;background:${fillColor}"></div></div>
+      </button>`;
+    }).join('')}</div>
+    <div class="locker-preview-hint">총 ${totalSlots}칸 기준으로 표시합니다.</div>
+  </div>`;
+}
+
 function renderSideRail(key,items){
   const target=document.getElementById('sideRail');
   if(!target)return;
   const activeKey=key&&RG[key]?key:getBestRegionKey();
-  const sourceItems=(items&&items.length)?items:(LOCKERS[activeKey]||[]);
+  const sourceItems=(items&&items.length)?items:[];
   target.innerHTML=`
     ${renderLockerPreviewSection(activeKey,sourceItems)}
     ${renderFestivalSection(activeKey,3)}
@@ -1778,9 +2052,10 @@ function updatePeek(key=curRegion){
 }
 
 function renderLandingState(){
-  const key=curRegion&&RG[curRegion]?curRegion:getBestRegionKey();
+  const isOverview=!(curRegion&&RG[curRegion]);
+  const key=isOverview?getBestRegionKey():curRegion;
   const featured=RG[key];
-  renderSideRail(key,LOCKERS[key]||[]);
+  renderSideRail(key,!isOverview&&key===curRegion?lockerD:[]);
   document.getElementById('sheetBody').innerHTML=`
     <div class="landing">
       <div class="landing-hero">
@@ -1854,7 +2129,7 @@ async function runSearch(){
   const rk=sel||crowdD.find(r=>r.level==='low')?.key||crowdD[0]?.key;
   curRegion=rk;
   courseD=(COURSES[rk]||[]).filter(item=>item.t!=='lock');
-  lockerD=LOCKERS[rk]||[];
+  await loadLockerData(rk);
 
   document.getElementById('spMain').innerHTML=`<b>${RG[rk].n}</b> · ${RG[rk].sub}`;
   document.getElementById('tabs').style.display='flex';
@@ -2080,9 +2355,10 @@ function setPillOn(key){
   });
 }
 
-function previewRegion(key){
+async function previewRegion(key){
   curRegion=key;
   document.getElementById('rsel').value=key;
+  await loadLockerData(key);
   setPillOn(key);
   updatePeek(key);
   updateMapFrame(key);
@@ -2115,14 +2391,17 @@ function focusSpot(index){
 }
 
 function focusLocker(index,key=curRegion){
-  const regionKey=key&&LOCKERS[key]?key:curRegion;
-  const locker=(LOCKERS[regionKey]||[])[index];
+  const regionKey=key&&RG[key]?key:curRegion;
+  const source=regionKey===curRegion&&lockerD.length?lockerD:(LOCKERS[regionKey]||[]);
+  const locker=source[index];
   if(!locker||locker.lat==null||locker.lng==null)return;
-  const copy=`${locker.addr} · 여유 ${locker.avail}/${locker.total}칸`;
+  const copy=typeof locker.avail==='number'
+    ? `${locker.addr} · ${locker.avail}/${locker.total} available`
+    : `${locker.addr} · ${locker.total||0} total`;
   if(mapProvider==='kakao'){
     map.setLevel(4);
     map.panTo(makeLatLng(locker.lat,locker.lng));
-    showInfoOverlay({n:locker.n,d:copy,lat:locker.lat,lng:locker.lng},'보관함 위치');
+    showInfoOverlay({n:locker.n,d:copy,lat:locker.lat,lng:locker.lng},'Locker');
   }else{
     map.flyTo([locker.lat,locker.lng],14,{duration:.8});
     L.popup({
@@ -2131,7 +2410,7 @@ function focusLocker(index,key=curRegion){
       offset:[0,-18],
     })
       .setLatLng([locker.lat,locker.lng])
-      .setContent(makePopupContent(locker.n,copy,'보관함 위치'))
+      .setContent(makePopupContent(locker.n,copy,'Locker'))
       .openOn(map);
   }
   toast(`📍 ${locker.n} 위치를 지도에서 열었어요`);
@@ -2140,7 +2419,7 @@ function focusLocker(index,key=curRegion){
 async function jumpR(key){
   curRegion=key;
   courseD=(COURSES[key]||[]).filter(item=>item.t!=='lock');
-  lockerD=LOCKERS[key]||[];
+  await loadLockerData(key);
   document.getElementById('spMain').innerHTML=`<b>${RG[key].n}</b> · ${RG[key].sub}`;
   updatePeek(key);
   updateMapFrame(key);
@@ -2204,6 +2483,60 @@ document.addEventListener('touchmove',e=>{
   }
 },{passive:true});
 document.addEventListener('touchend',()=>{drag.on=false});
+
+function renderLandingState(){
+  const isOverview=!(curRegion&&RG[curRegion]);
+  const key=isOverview?getBestRegionKey():curRegion;
+  const featured=RG[key];
+  const locker=getLockerSummary(key);
+  const lockerCopy=locker.locations
+    ? locker.realtimeLocations
+      ? `근처 보관함 ${locker.locations}곳의 여유 현황까지 함께 살펴볼 수 있어요.`
+      : `근처 보관함 ${locker.locations}곳의 위치와 전체 칸 수를 함께 확인할 수 있어요.`
+    : '지역 분위기와 축제 흐름을 먼저 보고 이동 동선을 골라보세요.';
+  renderSideRail(key,!isOverview&&key===curRegion?lockerD:[]);
+  document.getElementById('sheetBody').innerHTML=`
+    <div class="landing">
+      <div class="landing-hero">
+        <div class="landing-hero-shell">
+          <div class="landing-hero-copy">
+            <div class="landing-eyebrow">${isOverview?'전체 추천':'추천 지역 미리보기'}</div>
+            <div class="landing-title">${isOverview?'전남 여행을 계획해보세요':`${featured.n}부터 가볍게 둘러보는 전남 여행`}</div>
+            <div class="landing-copy">${isOverview?'지역 미리보기와 날짜 선택으로 시작하면 코스를 바로 찾을 수 있어요.':`${featured.n}의 ${featured.sub} 분위기를 먼저 보고, 날짜를 고르면 혼잡도 기반 코스를 바로 이어서 볼 수 있어요. ${lockerCopy}`}</div>
+            <div class="landing-cta-row">
+              <button class="landing-btn primary" onclick="openSP()">날짜 선택하고 코스 찾기</button>
+              <button class="landing-btn secondary" onclick="previewRegion('${key}')">${featured.n} 먼저 보기</button>
+            </div>
+          </div>
+          <div class="landing-hero-art">
+            <img src="assets/eco-mascot.png" alt="전남 ECO 여행 마스코트">
+          </div>
+        </div>
+      </div>
+      <div class="landing-section-title">
+        <span>지역 미리보기</span>
+        <span>카드를 누르면 지도와 함께 강조됩니다</span>
+      </div>
+      <div class="landing-grid">
+        ${Object.entries(RG).map(([rk,ri])=>{
+          const crowd=getCrowdEntry(rk);
+          return `<button class="region-card ${!isOverview&&rk===key?'on':''}" onclick="previewRegion('${rk}')">
+            <div class="region-card-head">
+              <div>
+                <div class="region-card-name">${ri.n}</div>
+                <div class="region-card-sub">${ri.sub}</div>
+              </div>
+              <div class="region-card-emoji" style="background:${ri.bg}">${ri.e}</div>
+            </div>
+            <div class="region-card-meta">
+              <span class="region-card-stat">${lvLbl(crowd.level)}</span>
+              <span class="region-card-stat">${Number(crowd.visitors||0).toLocaleString()}명 예상</span>
+            </div>
+          </button>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
 
 document.addEventListener('DOMContentLoaded',()=>{
   const boot=()=>{
