@@ -193,31 +193,6 @@ body{
 .btn-setting svg{width:18px;height:18px;stroke:var(--ink2);fill:none;stroke-width:1.8}
 
 /* ── PILLS ── */
-.pill-row{
-  position:relative;
-  width:min(var(--layout-max),calc(100vw - var(--frame-gap)*2));
-  padding:10px 0 0;
-  display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;
-}
-.pill-row::-webkit-scrollbar{display:none}
-.eco-pill{
-  flex-shrink:0;display:flex;align-items:center;gap:5px;
-  padding:7px 14px;border-radius:40px;
-  background:rgba(245,242,236,.9);
-  backdrop-filter:blur(12px);
-  border:1px solid rgba(255,255,255,.6);
-  font-size:12px;font-weight:500;color:var(--ink2);
-  cursor:pointer;transition:all .2s;
-  box-shadow:0 1px 10px rgba(0,0,0,.07);
-  white-space:nowrap;
-}
-.eco-pill .p-dot{width:6px;height:6px;border-radius:50%;background:var(--ink4)}
-.eco-pill:hover{border-color:var(--leaf);color:var(--moss)}
-.eco-pill.on{
-  background:var(--moss);border-color:var(--moss);color:#fff;
-  box-shadow:0 4px 16px rgba(45,90,61,.35);
-}
-.eco-pill.on .p-dot{background:var(--leaf2)}
 
 /* ── SHEET ── */
 .sheet-bg{
@@ -987,15 +962,6 @@ body{
   </div>
 
   <!-- PILLS -->
-  <div class="pill-row" id="pillRow">
-    <div class="eco-pill on" onclick="onPill(this,'')"><div class="p-dot"></div>전체 추천</div>
-    <div class="eco-pill" onclick="onPill(this,'yeosu')"><div class="p-dot" style="background:#0ea5e9"></div>여수</div>
-    <div class="eco-pill" onclick="onPill(this,'suncheon')"><div class="p-dot" style="background:var(--leaf)"></div>순천</div>
-    <div class="eco-pill" onclick="onPill(this,'damyang')"><div class="p-dot" style="background:#65a30d"></div>담양</div>
-    <div class="eco-pill" onclick="onPill(this,'mokpo')"><div class="p-dot" style="background:var(--earth2)"></div>목포</div>
-    <div class="eco-pill" onclick="onPill(this,'boseong')"><div class="p-dot" style="background:#059669"></div>보성</div>
-    <div class="eco-pill" onclick="onPill(this,'gangjin')"><div class="p-dot" style="background:#7c3aed"></div>강진</div>
-  </div>
 </div>
 
 <main class="app-shell">
@@ -1110,7 +1076,7 @@ const storedApiKey=localStorage.getItem('tapi');
 let API_KEY=storedApiKey===null?DEFAULT_API_KEY:storedApiKey;
 let map,markers=[],lines=[],courseMarkers=[],activeInfoOverlay=null,activeLeafletPopup=null;
 let mapProvider='leaflet';
-let curTab='course',curRegion=null;
+let curTab='course',curRegion='yeosu';
 let crowdD=[],courseD=[],lockerD=[];
 let kakaoBoundsGuard=false;
 
@@ -2455,11 +2421,14 @@ document.addEventListener('DOMContentLoaded',()=>{
   const boot=()=>{
     initMap();
     document.getElementById('tdate').value=formatInputDate(new Date());
+    document.getElementById('rsel').value='yeosu';
     document.getElementById('tdate').addEventListener('change',syncDatePreset);
     syncDatePreset();
-    updatePeek();
+    updatePeek('yeosu');
+    updateMapFrame('yeosu');
     renderLandingState();
-    setPillOn(null);
+    plotOverview('yeosu');
+    setPillOn('yeosu');
     window.addEventListener('resize',refreshMapLayout);
     if(window.innerWidth>=768){
       document.getElementById('sheet').className='sheet';
