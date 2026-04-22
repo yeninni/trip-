@@ -883,13 +883,7 @@ body{
 
   <!-- PILLS -->
   <div class="pill-row" id="pillRow">
-    <div class="eco-pill on" onclick="onPill(this,'')"><div class="p-dot"></div>전체 추천</div>
-    <div class="eco-pill" onclick="onPill(this,'yeosu')"><div class="p-dot" style="background:#0ea5e9"></div>여수</div>
-    <div class="eco-pill" onclick="onPill(this,'suncheon')"><div class="p-dot" style="background:var(--leaf)"></div>순천</div>
-    <div class="eco-pill" onclick="onPill(this,'damyang')"><div class="p-dot" style="background:#65a30d"></div>담양</div>
-    <div class="eco-pill" onclick="onPill(this,'mokpo')"><div class="p-dot" style="background:var(--earth2)"></div>목포</div>
-    <div class="eco-pill" onclick="onPill(this,'boseong')"><div class="p-dot" style="background:#059669"></div>보성</div>
-    <div class="eco-pill" onclick="onPill(this,'gangjin')"><div class="p-dot" style="background:#7c3aed"></div>강진</div>
+    <div class="eco-pill on" onclick="onPill(this,'')"><div class="p-dot"></div>전남</div>
   </div>
 </div>
 
@@ -1961,7 +1955,6 @@ function renderLockerPreviewSection(regionKey,items){
   return `<div class="info-panel locker-feature">
     <div class="info-panel-head">
       <div class="info-panel-title">근처 보관함</div>
-      <div class="info-panel-note">위치와 보관함 규모만 표시합니다</div>
     </div>
     <div class="locker-feature-list">${items.map((item,index)=>{
       const pct=100;
@@ -2322,13 +2315,7 @@ function onPill(el,key){
 function setPillOn(key){
   const pills=document.querySelectorAll('.eco-pill');
   pills.forEach(p=>p.classList.remove('on'));
-  if(!key){
-    pills[0]?.classList.add('on');
-    return;
-  }
-  pills.forEach(p=>{
-    if(p.textContent.trim()===RG[key]?.n)p.classList.add('on');
-  });
+  pills[0]?.classList.add('on');
 }
 
 async function previewRegion(key){
@@ -2521,7 +2508,7 @@ function renderLandingState(){
       <div class="landing-hero">
         <div class="landing-hero-shell">
           <div class="landing-hero-copy">
-            <div class="landing-eyebrow">${isOverview?'전체 추천':'추천 지역 미리보기'}</div>
+            <div class="landing-eyebrow">${isOverview?'전남':'추천 지역 미리보기'}</div>
             <div class="landing-title">${isOverview?'전남 여행을 계획해보세요':`${featured.n}부터 가볍게 둘러보는 전남 여행`}</div>
             <div class="landing-copy">${isOverview?'지역 미리보기와 날짜 선택으로 시작하면 코스를 바로 찾을 수 있어요.':`${featured.n}의 ${featured.sub} 분위기를 먼저 보고, 날짜를 고르면 혼잡도 기반 코스를 바로 이어서 볼 수 있어요. ${lockerCopy}`}</div>
             <div class="landing-cta-row">
