@@ -1248,8 +1248,7 @@ const FESTIVALS={
     {season:'가을',date:'2026.05.10 - 05.12',name:'습지 생태 체험주간',place:'순천만 습지 일대',copy:'갈대 풍경과 생태 체험 프로그램을 함께 보기 좋은 계절 포인트예요.'},
   ],
   damyang:[
-    {season:'봄',date:'2026.04.21 - 04.23',name:'대나무 힐링 페어',place:'죽녹원 · 관방제림',copy:'숲길 걷기와 로컬 먹거리를 함께 즐기기 좋은 대표 시즌이에요.'},
-    {season:'가을',date:'2026.05.01 - 05.05',name:'정원·산책 주간',place:'메타세쿼이아길',copy:'서늘한 계절에 라이딩과 산책을 묶기 좋은 분위기로 바뀌어요.'},
+    {season:'봄',date:'2026.05.01 - 05.05',name:'제25회 담양 대나무축제',place:'담양종합체육관 · 죽녹원 · 담빛음악당 일원',copy:'빛나라 빛나, 대나무! 야간 경관과 체험 프로그램을 함께 즐길 수 있는 담양 대표 축제예요.'},
   ],
   mokpo:[
     {season:'봄',date:'2026.04.25 - 04.27',name:'항구 문화 페스타',place:'근대역사관 · 평화광장',copy:'근대거리 산책과 해양 야경을 묶은 문화 프로그램 흐름과 잘 어울려요.'},
@@ -1978,7 +1977,8 @@ function updatePeek(key=curRegion){
 }
 
 function renderLandingState(){
-  const key=curRegion&&RG[curRegion]?curRegion:getBestRegionKey();
+  const isOverview=!(curRegion&&RG[curRegion]);
+  const key=isOverview?getBestRegionKey():curRegion;
   const featured=RG[key];
   renderSideRail(key,getLockersForRegion(key));
   document.getElementById('sheetBody').innerHTML=`
@@ -1988,10 +1988,10 @@ function renderLandingState(){
           <div class="landing-hero-copy">
             <div class="landing-eyebrow">한적한 여행 추천</div>
             <div class="landing-title">짐보관부터 챙기고, 복잡한 인기 코스 대신 더 여유로운 전남을 골라보세요</div>
-            <div class="landing-copy">${featured.n}부터 둘러보면 ${featured.sub} 분위기를 빠르게 감 잡을 수 있어요. 날짜를 정하면 혼잡도 기반 코스와 함께 보관 거점까지 바로 이어서 확인할 수 있습니다.</div>
+            <div class="landing-copy">${isOverview?'날짜를 정하면 혼잡도 기반 코스와 함께 지역별 분위기, 보관 거점, 다가오는 축제까지 한 번에 이어서 확인할 수 있습니다.':`${featured.n}부터 둘러보면 ${featured.sub} 분위기를 빠르게 감 잡을 수 있어요. 날짜를 정하면 혼잡도 기반 코스와 함께 보관 거점까지 바로 이어서 확인할 수 있습니다.`}</div>
             <div class="landing-cta-row">
               <button class="landing-btn primary" onclick="openSP()">날짜 선택하고 코스 찾기</button>
-              <button class="landing-btn secondary" onclick="previewRegion('${key}')">${featured.n} 먼저 보기</button>
+              <button class="landing-btn secondary" onclick="previewRegion('${key}')">${isOverview?'추천 지역 먼저 보기':`${featured.n} 먼저 보기`}</button>
             </div>
           </div>
           <div class="landing-hero-art">
@@ -2008,7 +2008,7 @@ function renderLandingState(){
         ${Object.entries(RG).map(([rk,ri])=>{
           const crowd=getCrowdEntry(rk);
           const locker=getLockerSummary(rk);
-          return `<button class="region-card ${rk===key?'on':''}" onclick="previewRegion('${rk}')">
+          return `<button class="region-card ${!isOverview&&rk===key?'on':''}" onclick="previewRegion('${rk}')">
             <div class="region-card-head">
               <div>
                 <div class="region-card-name">${ri.n}</div>
