@@ -1746,6 +1746,9 @@ function getFestivalPosterTheme(item,key,index){
 }
 
 function renderFestivalPoster(item,key,index){
+  if(key==='damyang'){
+    return `<div class="festival-poster image" style="background-image:url('assets/damyang-bamboo-festival-poster.png')" aria-label="${item.name} 포스터"></div>`;
+  }
   if(key==='yeosu' && (item.name||'').includes('밤바다 불꽃축제')){
     return `<div class="festival-poster image" style="background-image:url('assets/yeosu-fireworks-poster.png')" aria-label="${item.name} 포스터"></div>`;
   }
