@@ -1,2 +1,14 @@
 .server-out.log
 .server-err.log
+.tmp/
+
+# 환경변수/키 파일은 절대 커밋하지 않습니다.
+.env
+.env.*
+!.env.example
+
+# 로컬 런타임 설정 (카카오맵 JavaScript 키)
+assets/config.js
+
+__pycache__/
+*.pyc
